@@ -20,11 +20,13 @@ import {
   Building,
   UtensilsCrossed,
   FileText,
+  ClipboardList,
 } from 'lucide-react';
 import type { Role } from '@/lib/types';
 
 const patientNav = [
   { name: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard /> },
+  { name: 'Self Assessment', href: '/dashboard/assessment', icon: <ClipboardList /> },
   { name: 'Personal Chatbot', href: '/dashboard/chatbot', icon: <Bot /> },
   { name: 'My Profile', href: '/dashboard/profile', icon: <User /> },
 ];
