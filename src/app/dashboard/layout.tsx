@@ -23,30 +23,31 @@ export default function DashboardLayout({
 }) {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen w-full">
         <DashboardSidebar />
-        <div className="flex flex-col w-full">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="sticky top-0 z-10 flex h-16 items-center gap-2 border-b bg-background px-3 sm:px-4 md:px-6">
             <div className="md:hidden">
               <SidebarTrigger />
             </div>
-            <div className="flex w-full items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+            <div className="flex w-full items-center gap-2 sm:gap-4 md:ml-auto md:gap-2 lg:gap-4">
               <div className="ml-auto flex-1 sm:flex-initial">
-                <Link href="/" className="flex items-center gap-2 font-headline font-semibold">
-                  <Leaf className="h-6 w-6 text-primary" />
-                  <span>AyurTrack</span>
+                <Link href="/" className="flex items-center gap-2 font-headline font-semibold text-sm sm:text-base">
+                  <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                  <span className="hidden sm:inline">AyurTrack</span>
+                  <span className="sm:hidden">AT</span>
                 </Link>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-                    <Avatar className="h-9 w-9">
+                  <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full">
+                    <Avatar className="h-8 w-8 sm:h-9 sm:w-9">
                       <AvatarImage src="https://picsum.photos/seed/user-avatar/100/100" alt="User" />
-                      <AvatarFallback>U</AvatarFallback>
+                      <AvatarFallback className="text-xs">U</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuContent className="w-48 sm:w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">Guest User</p>
@@ -57,7 +58,7 @@ export default function DashboardLayout({
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/">
+                    <Link href="/" className="flex items-center">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Log out</span>
                     </Link>
@@ -66,8 +67,12 @@ export default function DashboardLayout({
               </DropdownMenu>
             </div>
           </header>
-          <SidebarInset>
-            <main className="flex-1 p-4 sm:p-6">{children}</main>
+          <SidebarInset className="bg-background">
+            <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-auto bg-background">
+              <div className="max-w-full">
+                {children}
+              </div>
+            </main>
           </SidebarInset>
         </div>
       </div>

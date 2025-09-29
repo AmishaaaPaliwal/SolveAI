@@ -58,9 +58,17 @@ export function DashboardSidebar() {
   const currentNav = navItems[role];
 
   return (
-    <Sidebar>
-      <SidebarHeader />
-      <SidebarContent>
+    <Sidebar className="bg-sidebar">
+      <SidebarHeader className="bg-sidebar border-b border-sidebar-border">
+        <div className="px-2 py-2">
+          <h2 className="text-lg font-semibold text-sidebar-foreground">
+            {role === 'patient' ? 'Patient Portal' :
+             role === 'dietitian' ? 'Dietitian Portal' :
+             'Hospital Portal'}
+          </h2>
+        </div>
+      </SidebarHeader>
+      <SidebarContent className="bg-sidebar">
         <SidebarMenu>
           {currentNav.map((item) => (
             <SidebarMenuItem key={item.name}>
