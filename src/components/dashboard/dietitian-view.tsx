@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockPatients } from "@/lib/data";
 import { generateInitialDietChart } from "@/ai/flows/generate-initial-diet-chart";
 import { User, Bot, Loader2 } from "lucide-react";
 import { Label } from "../ui/label";
@@ -22,6 +23,8 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import type { Patient } from "@/lib/types";
+import { Skeleton } from "../ui/skeleton";
 
 const formSchema = z.object({
   userProfile: z.string().min(10, "Please provide more details."),
@@ -144,6 +147,25 @@ function DietGenerationForm() {
 }
 
 function PatientManagement() {
+    const [patients, setPatients] = useState<Patient[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchPatients = async () => {
+            setIsLoading(true);
+            try {
+                const querySnapshot = await getDocs(collection(db, "patients"));
+                const patientsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Patient));
+                setPatients(patientsData);
+            } catch (error) {
+                console.error("Error fetching patients: ", error);
+            }
+            setIsLoading(false);
+        };
+
+        fetchPatients();
+    }, []);
+
     return (
         <Card>
             <CardHeader>
@@ -162,17 +184,33 @@ function PatientManagement() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {mockPatients.map((patient) => (
-                        <TableRow key={patient.id}>
-                            <TableCell className="font-medium">{patient.name}</TableCell>
-                            <TableCell>{patient.age}</TableCell>
-                            <TableCell>{patient.gender}</TableCell>
-                            <TableCell className="font-mono">{patient.code}</TableCell>
-                            <TableCell>
-                                <Button variant="outline" size="sm">View Details</Button>
-                            </TableCell>
-                        </TableRow>
-                        ))}
+                        {isLoading ? (
+                            Array.from({ length: 4 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : patients.length > 0 ? (
+                            patients.map((patient) => (
+                            <TableRow key={patient.id}>
+                                <TableCell className="font-medium">{patient.name}</TableCell>
+                                <TableCell>{patient.age}</TableCell>
+                                <TableCell>{patient.gender}</TableCell>
+                                <TableCell className="font-mono">{patient.code}</TableCell>
+                                <TableCell>
+                                    <Button variant="outline" size="sm">View Details</Button>
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={5} className="text-center">No patients found.</TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </CardContent>
