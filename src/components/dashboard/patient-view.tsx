@@ -6,7 +6,6 @@ export function PatientView() {
   return (
     <div className="space-y-6">
       <DietChart />
-      <PersonalChatbot />
     </div>
   );
 }
