@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useSearchParams } from 'next/navigation';
@@ -23,7 +24,6 @@ import type { Role } from '@/lib/types';
 
 const patientNav = [
   { name: 'Dashboard', icon: <LayoutDashboard /> },
-  { name: 'My Diet Plan', icon: <FileText /> },
   { name: 'Personal Chatbot', icon: <Bot /> },
   { name: 'My Profile', icon: <User /> },
 ];
