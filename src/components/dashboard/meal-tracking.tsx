@@ -5,7 +5,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, Clock, User, Utensils, XCircle, AlertCircle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { CheckCircle, Clock, User, Utensils, XCircle, AlertCircle, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { mealTrackingService } from "@/lib/firestore";
 import type { MealTracking, Patient, DietPlan } from "@/lib/types";
 
@@ -55,10 +57,25 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
   const { toast } = useToast();
   const [mealTracking, setMealTracking] = useState<MealTracking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [realTimeEnabled, setRealTimeEnabled] = useState(true);
 
   useEffect(() => {
     loadMealTracking();
-  }, [patient.id]);
+
+    // Set up real-time subscription if enabled
+    let unsubscribe: (() => void) | undefined;
+    if (realTimeEnabled) {
+      unsubscribe = mealTrackingService.subscribe(patient.id, (meals) => {
+        setMealTracking(meals);
+      });
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [patient.id, realTimeEnabled]);
 
   const loadMealTracking = async () => {
     try {
@@ -200,13 +217,40 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Utensils className="h-5 w-5" />
-          Meal Tracking - {patient.name}
-        </CardTitle>
-        <CardDescription>
-          Track meal service and consumption for today's diet plan
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Utensils className="h-5 w-5" />
+              Meal Tracking - {patient.name}
+            </CardTitle>
+            <CardDescription>
+              Track meal service and consumption for today's diet plan
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="realtime-toggle" className="text-sm">
+                {realTimeEnabled ? <Wifi className="h-4 w-4 text-green-500" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
+              </Label>
+              <Switch
+                id="realtime-toggle"
+                checked={realTimeEnabled}
+                onCheckedChange={setRealTimeEnabled}
+              />
+              <Label htmlFor="realtime-toggle" className="text-sm">
+                Real-time
+              </Label>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => loadMealTracking()}
+              disabled={isLoading}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Generate Today's Meals Button */}

@@ -37,6 +37,89 @@ export type Patient = {
 
 export type Role = 'patient' | 'dietitian' | 'hospital';
 
+// Ayurvedic Properties
+export type Rasa = 'Sweet' | 'Sour' | 'Salty' | 'Bitter' | 'Pungent' | 'Astringent';
+export type Virya = 'Hot' | 'Cold';
+export type Guna = 'Heavy' | 'Light' | 'Oily' | 'Dry' | 'Sharp' | 'Dull' | 'Static' | 'Mobile' | 'Soft' | 'Hard' | 'Clear' | 'Sticky';
+export type Vipaka = 'Sweet' | 'Sour' | 'Pungent';
+export type DoshaEffect = 'Vata-pacifying' | 'Vata-aggravating' | 'Pitta-pacifying' | 'Pitta-aggravating' | 'Kapha-pacifying' | 'Kapha-aggravating' | 'Tridoshic';
+
+// Nutritional Data
+export interface NutritionalData {
+  calories: number;
+  protein: number; // grams
+  carbohydrates: number; // grams
+  fat: number; // grams
+  fiber?: number; // grams
+  sugar?: number; // grams
+  sodium?: number; // mg
+  potassium?: number; // mg
+  calcium?: number; // mg
+  iron?: number; // mg
+  vitaminC?: number; // mg
+  vitaminA?: number; // IU
+}
+
+// Ayurvedic Properties
+export interface AyurvedicProperties {
+  rasa: Rasa[];
+  virya: Virya;
+  guna: Guna[];
+  vipaka: Vipaka;
+  doshaEffect: DoshaEffect[];
+  digestibility: 'Easy' | 'Moderate' | 'Difficult';
+  seasonalSuitability?: ('Spring' | 'Summer' | 'Monsoon' | 'Autumn' | 'Winter')[];
+  potency?: 'Mild' | 'Moderate' | 'Strong';
+}
+
+// Food Item in Database
+export interface FoodItem {
+  id: string;
+  name: string;
+  category: 'Vegetable' | 'Fruit' | 'Grain' | 'Dairy' | 'Meat' | 'Spice' | 'Oil' | 'Sweetener' | 'Beverage' | 'Other';
+  nutritionalData: NutritionalData;
+  ayurvedicProperties: AyurvedicProperties;
+  commonAlternatives?: string[]; // IDs of alternative foods
+  regionalVariations?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Mess Menu Item
+export interface MessMenuItem {
+  foodId?: string; // Reference to FoodItem
+  name: string;
+  quantity?: string; // e.g., "100g", "1 cup"
+  portion?: string; // e.g., "small", "medium", "large"
+  isAvailable: boolean;
+  nutritionalData?: NutritionalData;
+  ayurvedicProperties?: AyurvedicProperties;
+  notes?: string; // Special preparation notes
+}
+
+// Mess Menu Structure
+export interface MessMenu {
+  id: string;
+  hospitalId: string;
+  date: Date;
+  meals: {
+    breakfast: MessMenuItem[];
+    lunch: MessMenuItem[];
+    dinner: MessMenuItem[];
+    snacks: MessMenuItem[];
+  };
+  createdBy: string;
+  lastUpdated: Date;
+  isActive: boolean;
+  version: number; // For tracking changes
+  nutritionalSummary?: {
+    totalCalories: number;
+    totalProtein: number;
+    totalCarbs: number;
+    totalFat: number;
+  };
+}
+
 export type DietPlan = {
   id: string;
   patientId: string;
@@ -129,41 +212,6 @@ export type Vitals = {
   notes?: string;
 };
 
-export type MessMenu = {
-  id: string;
-  hospitalId: string;
-  date: Date;
-  meals: {
-    breakfast: MessMenuItem[];
-    lunch: MessMenuItem[];
-    dinner: MessMenuItem[];
-    snacks?: MessMenuItem[];
-  };
-  createdBy: string;
-  lastUpdated: Date;
-  isActive?: boolean;
-};
-
-export type MessMenuItem = {
-  name: string;
-  description?: string;
-  nutritionalData?: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
-    fiber?: number;
-  };
-  ayurvedicProperties?: {
-    rasa: string[]; // sweet, sour, salty, bitter, pungent, astringent
-    virya: 'hot' | 'cold';
-    guna: string[]; // heavy, light, oily, dry, etc.
-    vipaka: 'sweet' | 'sour' | 'pungent';
-    digestibility: 'easy' | 'moderate' | 'difficult';
-  };
-  allergens?: string[];
-  suitableFor?: ('Vata' | 'Pitta' | 'Kapha')[];
-};
 
 
 export type User = {

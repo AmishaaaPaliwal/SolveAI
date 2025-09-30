@@ -20,6 +20,7 @@ import { patientsService, messMenusService, vitalsService, dietPlansService } fr
 import type { Patient, MessMenu, MessMenuItem, Vitals, DietPlan } from "@/lib/types";
 import { MealTrackingComponent } from "./meal-tracking";
 import { VitalsForm } from "./vitals-form";
+import { MessMenuManager } from "./mess-menu-manager";
 
 
 function LinkPatientForm() {
@@ -224,6 +225,7 @@ function MessMenuForm() {
             const parseMenuItems = (items: string[]): MessMenuItem[] => {
                 return items.map(item => ({
                     name: item.trim(),
+                    isAvailable: true,
                     // In a real implementation, you'd parse nutritional and ayurvedic data
                     // For now, we'll just store the name
                 }));
@@ -260,6 +262,7 @@ function MessMenuForm() {
                 createdBy: 'hospital-admin', // Should come from auth context
                 lastUpdated: new Date(),
                 isActive: true,
+                version: 1,
             };
 
             if (currentMenu) {
@@ -788,7 +791,7 @@ export function HospitalView() {
           <VitalsForm showPatientSelection={false} />
         </TabsContent>
         <TabsContent value="mess-menu" className="mt-4 sm:mt-6">
-          <MessMenuForm />
+          <MessMenuManager />
         </TabsContent>
       </Tabs>
     </div>

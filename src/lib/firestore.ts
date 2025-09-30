@@ -505,5 +505,58 @@ export const patientFeedbackService = {
     ),
 };
 
+// Food database service for Ayurvedic food items
+export const foodDatabaseService = {
+  // Get all food items
+  getAll: () => FirestoreService.getAll<FoodItem>('foodDatabase', [orderBy('name', 'asc')]),
+
+  // Get food items by category
+  getByCategory: (category: FoodItem['category']) =>
+    FirestoreService.getAll<FoodItem>('foodDatabase', [
+      where('category', '==', category),
+      orderBy('name', 'asc')
+    ]),
+
+  // Search food items by name
+  searchByName: (searchTerm: string) =>
+    FirestoreService.getAll<FoodItem>('foodDatabase', [
+      where('name', '>=', searchTerm),
+      where('name', '<=', searchTerm + '\uf8ff'),
+      orderBy('name', 'asc')
+    ]),
+
+  // Get food items suitable for a dosha
+  getByDoshaSuitability: (dosha: 'Vata' | 'Pitta' | 'Kapha') =>
+    FirestoreService.getAll<FoodItem>('foodDatabase', [
+      where(`doshaSuitability.${dosha}`, '==', true),
+      orderBy('name', 'asc')
+    ]),
+
+  // Get alternatives for a food item
+  getAlternatives: async (foodId: string) => {
+    const foodItem = await FirestoreService.getById<FoodItem>('foodDatabase', foodId);
+    if (!foodItem || !foodItem.commonAlternatives) return [];
+
+    // Get alternative food items
+    const alternatives = await Promise.all(
+      foodItem.commonAlternatives.map(altId =>
+        FirestoreService.getById<FoodItem>('foodDatabase', altId)
+      )
+    );
+
+    return alternatives.filter(alt => alt !== null) as FoodItem[];
+  },
+
+  // Create food item
+  create: (data: Omit<FoodItem, 'id'>) => FirestoreService.create<FoodItem>('foodDatabase', data),
+
+  // Update food item
+  update: (id: string, data: Partial<Omit<FoodItem, 'id'>>) =>
+    FirestoreService.update<FoodItem>('foodDatabase', id, data),
+
+  // Delete food item
+  delete: (id: string) => FirestoreService.delete('foodDatabase', id),
+};
+
 // Import types (you'll need to define these in your types file)
-import type { Patient, DietPlan, Consultation, MessMenu, Vitals, MealTracking, PatientFeedback } from './types';
+import type { Patient, DietPlan, Consultation, MessMenu, Vitals, MealTracking, PatientFeedback, FoodItem } from './types';
