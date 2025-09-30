@@ -17,11 +17,15 @@ class RedisService {
     });
 
     this.client.on('connect', () => {
-      console.log('✅ Redis connected successfully');
+      console.log('✅ Redis TCP connected');
+    });
+
+    this.client.on('ready', () => {
+      console.log('✅ Redis ready');
       this._isConnected = true;
     });
 
-    this.client.on('disconnect', () => {
+    this.client.on('end', () => {
       console.log('❌ Redis disconnected');
       this._isConnected = false;
     });
