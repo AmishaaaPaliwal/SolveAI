@@ -28,7 +28,11 @@
         },
         {
           "fieldPath": "date",
-          "order": "DESCENDING"
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
         }
       ]
     },
@@ -48,6 +52,20 @@
     },
     {
       "collectionGroup": "patientFeedback",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "patientId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "consultations",
       "queryScope": "COLLECTION",
       "fields": [
         {

@@ -19,6 +19,7 @@ import { Label } from "../ui/label";
 import { patientsService, messMenusService, vitalsService, dietPlansService } from "@/lib/firestore";
 import type { Patient, MessMenu, MessMenuItem, Vitals, DietPlan } from "@/lib/types";
 import { MealTrackingComponent } from "./meal-tracking";
+import { VitalsForm } from "./vitals-form";
 
 
 function LinkPatientForm() {
@@ -338,280 +339,6 @@ Mixed Vegetables (Rich in fiber)"
     );
 }
 
-function VitalsForm() {
-    const { toast } = useToast();
-    const [isLoading, setIsLoading] = useState(false);
-    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-    const [patients, setPatients] = useState<Patient[]>([]);
-    const vitalsFormRef = useRef<HTMLFormElement>(null);
-
-    useEffect(() => {
-        const loadPatients = async () => {
-            try {
-                const patientsData = await patientsService.getAll();
-                setPatients(patientsData);
-            } catch (error) {
-                console.error('Error loading patients:', error);
-            }
-        };
-        loadPatients();
-    }, []);
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        setIsLoading(true);
-
-        try {
-            const formData = new FormData(e.currentTarget);
-            const patientId = formData.get('patientId') as string;
-
-            if (!patientId) {
-                toast({
-                    title: "Patient Required",
-                    description: "Please select a patient.",
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            // Build vitals data object, filtering out undefined values
-            const vitalsData: any = {
-                patientId,
-                recordedBy: 'hospital-staff', // Should come from auth context
-                date: new Date(),
-                bloodPressure: {
-                    systolic: parseInt(formData.get('systolic') as string) || 0,
-                    diastolic: parseInt(formData.get('diastolic') as string) || 0,
-                },
-                bmi: parseFloat(formData.get('bmi') as string) || 0,
-                weight: parseFloat(formData.get('weight') as string) || 0,
-                height: parseFloat(formData.get('height') as string) || 0,
-            };
-
-            // Add optional blood sugar data
-            const fastingBloodSugar = formData.get('fastingBloodSugar');
-            const postPrandialBloodSugar = formData.get('postPrandialBloodSugar');
-            if (fastingBloodSugar) {
-                vitalsData.bloodSugar = {
-                    fasting: parseFloat(fastingBloodSugar as string) || 0,
-                };
-                if (postPrandialBloodSugar) {
-                    vitalsData.bloodSugar.postPrandial = parseFloat(postPrandialBloodSugar as string);
-                }
-            }
-
-            // Add optional thyroid data
-            const tsh = formData.get('tsh');
-            if (tsh) {
-                vitalsData.thyroid = {
-                    tsh: parseFloat(tsh as string) || 0,
-                };
-                const t3 = formData.get('t3');
-                const t4 = formData.get('t4');
-                if (t3) vitalsData.thyroid.t3 = parseFloat(t3 as string);
-                if (t4) vitalsData.thyroid.t4 = parseFloat(t4 as string);
-            }
-
-            // Add optional cholesterol data
-            const totalCholesterol = formData.get('totalCholesterol');
-            if (totalCholesterol) {
-                vitalsData.cholesterol = {
-                    total: parseFloat(totalCholesterol as string) || 0,
-                    hdl: parseFloat(formData.get('hdl') as string) || 0,
-                    ldl: parseFloat(formData.get('ldl') as string) || 0,
-                    triglycerides: parseFloat(formData.get('triglycerides') as string) || 0,
-                };
-            }
-
-            // Add optional temperature
-            const temperature = formData.get('temperature');
-            if (temperature) {
-                vitalsData.temperature = parseFloat(temperature as string);
-            }
-
-            // Add optional pulse
-            const pulse = formData.get('pulse');
-            if (pulse) {
-                vitalsData.pulse = parseInt(pulse as string);
-            }
-
-            // Add optional notes
-            const notes = formData.get('notes') as string;
-            if (notes && notes.trim()) {
-                vitalsData.notes = notes.trim();
-            }
-
-            await vitalsService.create(vitalsData);
-
-            toast({
-                title: "Vitals Recorded",
-                description: "Patient vitals have been successfully recorded.",
-            });
-
-            // Reset form safely
-            if (vitalsFormRef.current) {
-                vitalsFormRef.current.reset();
-            }
-            setSelectedPatient(null);
-
-        } catch (error) {
-            console.error('Error recording vitals:', error);
-            toast({
-                title: "Recording Failed",
-                description: "There was an error recording the vitals. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2"><HeartPulse /> Record Patient Vitals</CardTitle>
-                <CardDescription>
-                    Record vital signs and medical measurements for hospital patients.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <form ref={vitalsFormRef} onSubmit={handleSubmit} className="space-y-6">
-                    {/* Patient Selection */}
-                    <div className="space-y-2">
-                        <Label htmlFor="patientId">Select Patient *</Label>
-                        <select
-                            id="patientId"
-                            name="patientId"
-                            required
-                            className="w-full p-2 border rounded-md"
-                            onChange={(e) => {
-                                const patient = patients.find(p => p.id === e.target.value);
-                                setSelectedPatient(patient || null);
-                            }}
-                        >
-                            <option value="">Choose a patient...</option>
-                            {patients.map((patient) => (
-                                <option key={patient.id} value={patient.id}>
-                                    {patient.name} - {patient.code}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {selectedPatient && (
-                        <div className="bg-secondary/50 p-3 rounded-lg">
-                            <p className="text-sm text-muted-foreground">
-                                Recording vitals for: <span className="font-medium">{selectedPatient.name}</span>
-                            </p>
-                        </div>
-                    )}
-
-                    {/* Vital Signs */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Vital Signs</h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="weight">Weight (kg) *</Label>
-                                <Input id="weight" name="weight" type="number" step="0.1" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="height">Height (cm) *</Label>
-                                <Input id="height" name="height" type="number" step="0.1" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="bmi">BMI *</Label>
-                                <Input id="bmi" name="bmi" type="number" step="0.1" required />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="temperature">Temperature (°C)</Label>
-                                <Input id="temperature" name="temperature" type="number" step="0.1" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="pulse">Pulse Rate (bpm)</Label>
-                                <Input id="pulse" name="pulse" type="number" />
-                            </div>
-                        </div>
-
-                        {/* Blood Pressure */}
-                        <div className="space-y-2">
-                            <Label>Blood Pressure (mmHg) *</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    name="systolic"
-                                    placeholder="Systolic"
-                                    type="number"
-                                    required
-                                    className="flex-1"
-                                />
-                                <span className="flex items-center">/</span>
-                                <Input
-                                    name="diastolic"
-                                    placeholder="Diastolic"
-                                    type="number"
-                                    required
-                                    className="flex-1"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Blood Tests */}
-                    <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Blood Tests</h3>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="fastingBloodSugar">Fasting Blood Sugar (mg/dL)</Label>
-                                <Input id="fastingBloodSugar" name="fastingBloodSugar" type="number" step="0.1" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="postPrandialBloodSugar">Post-Prandial Blood Sugar (mg/dL)</Label>
-                                <Input id="postPrandialBloodSugar" name="postPrandialBloodSugar" type="number" step="0.1" />
-                            </div>
-                        </div>
-
-                        {/* Thyroid */}
-                        <div className="space-y-2">
-                            <Label>Thyroid Profile</Label>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                <Input name="tsh" placeholder="TSH (μIU/mL)" type="number" step="0.01" />
-                                <Input name="t3" placeholder="T3 (ng/dL)" type="number" step="0.01" />
-                                <Input name="t4" placeholder="T4 (μg/dL)" type="number" step="0.01" />
-                            </div>
-                        </div>
-
-                        {/* Cholesterol */}
-                        <div className="space-y-2">
-                            <Label>Lipid Profile</Label>
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                <Input name="totalCholesterol" placeholder="Total (mg/dL)" type="number" />
-                                <Input name="hdl" placeholder="HDL (mg/dL)" type="number" />
-                                <Input name="ldl" placeholder="LDL (mg/dL)" type="number" />
-                                <Input name="triglycerides" placeholder="Triglycerides (mg/dL)" type="number" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Notes */}
-                    <div className="space-y-2">
-                        <Label htmlFor="notes">Additional Notes</Label>
-                        <Textarea
-                            id="notes"
-                            name="notes"
-                            placeholder="Any additional observations, symptoms, or medical notes..."
-                            rows={3}
-                        />
-                    </div>
-
-                    <Button type="submit" disabled={isLoading} className="w-full">
-                        {isLoading ? "Recording..." : "Record Vitals"}
-                    </Button>
-                </form>
-            </CardContent>
-        </Card>
-    );
-}
 
 function MealTrackingView() {
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -926,7 +653,7 @@ function PatientManagement() {
 
             {/* Patient Details Modal */}
             <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <User className="h-5 w-5" />
@@ -934,197 +661,80 @@ function PatientManagement() {
                         </DialogTitle>
                     </DialogHeader>
 
-                    {selectedPatient && (
-                        <div className="space-y-6">
-                            {/* Patient Basic Information */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Basic Information</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Patient Code:</span>
-                                            <span className="font-mono font-medium">{selectedPatient.code}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Age:</span>
-                                            <span>{selectedPatient.age} years</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">Gender:</span>
-                                            <span>{selectedPatient.gender}</span>
-                                        </div>
-                                        {selectedPatient.email && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Email:</span>
-                                                <span className="text-sm">{selectedPatient.email}</span>
-                                            </div>
-                                        )}
-                                        {selectedPatient.phone && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Phone:</span>
-                                                <span>{selectedPatient.phone}</span>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Health Information</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        {selectedPatient.dietaryHabits && (
-                                            <div>
-                                                <span className="text-muted-foreground block mb-1">Dietary Habits:</span>
-                                                <span className="text-sm">{selectedPatient.dietaryHabits}</span>
-                                            </div>
-                                        )}
-                                        {selectedPatient.allergies && selectedPatient.allergies.length > 0 && (
-                                            <div>
-                                                <span className="text-muted-foreground block mb-1">Allergies:</span>
-                                                <span className="text-sm">{selectedPatient.allergies.join(', ')}</span>
-                                            </div>
-                                        )}
-                                        {selectedPatient.doshaType && (
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Dosha Type:</span>
-                                                <span className="font-medium">{selectedPatient.doshaType}</span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Registered:</span>
-                                            <span>{selectedPatient.registrationDate ? new Date(selectedPatient.registrationDate).toLocaleDateString() : 'Unknown'}</span>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                    {selectedPatient ? (
+                        <div className="space-y-4">
+                            {/* Basic Information */}
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Patient Code:</span>
+                                    <p className="font-mono font-medium">{selectedPatient.code}</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Age:</span>
+                                    <p>{selectedPatient.age} years</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Gender:</span>
+                                    <p>{selectedPatient.gender}</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Registered:</span>
+                                    <p>{selectedPatient.registrationDate ? new Date(selectedPatient.registrationDate).toLocaleDateString() : 'Unknown'}</p>
+                                </div>
                             </div>
 
-                            {/* Vitals History */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        <Activity className="h-5 w-5" />
-                                        Vitals History
-                                    </CardTitle>
-                                    <p className="text-sm text-muted-foreground">
-                                        {patientVitals.length} recorded vitals
-                                    </p>
-                                </CardHeader>
-                                <CardContent>
-                                    {patientVitals.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {patientVitals.map((vital: any, index: number) => (
-                                                <div key={vital.id || index} className="border rounded-lg p-4 bg-secondary/20">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <div className="flex items-center gap-2">
-                                                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                            <span className="font-medium">
-                                                                {vital.date ? new Date(vital.date.seconds * 1000).toLocaleDateString() : 'Unknown date'}
-                                                            </span>
-                                                            <span className="text-sm text-muted-foreground">
-                                                                {vital.date ? new Date(vital.date.seconds * 1000).toLocaleTimeString() : ''}
-                                                            </span>
-                                                        </div>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Recorded by: {vital.recordedBy || 'Hospital Staff'}
-                                                        </span>
-                                                    </div>
+                            {/* Contact Information */}
+                            {(selectedPatient.email || selectedPatient.phone) && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Contact Information:</span>
+                                    <div className="text-sm space-y-1">
+                                        {selectedPatient.email && <p>Email: {selectedPatient.email}</p>}
+                                        {selectedPatient.phone && <p>Phone: {selectedPatient.phone}</p>}
+                                    </div>
+                                </div>
+                            )}
 
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                                        {/* Vital Signs */}
-                                                        <div className="space-y-1">
-                                                            <span className="font-medium text-muted-foreground">Weight</span>
-                                                            <p className="font-medium">{vital.weight} kg</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="font-medium text-muted-foreground">Height</span>
-                                                            <p className="font-medium">{vital.height} cm</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="font-medium text-muted-foreground">BMI</span>
-                                                            <p className="font-medium">{vital.bmi}</p>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <span className="font-medium text-muted-foreground">Blood Pressure</span>
-                                                            <p className="font-medium">{vital.bloodPressure?.systolic}/{vital.bloodPressure?.diastolic} mmHg</p>
-                                                        </div>
+                            {/* Health Information */}
+                            {(selectedPatient.dietaryHabits || selectedPatient.allergies?.length) && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Health Information:</span>
+                                    <div className="text-sm space-y-1">
+                                        {selectedPatient.dietaryHabits && <p>Dietary Habits: {selectedPatient.dietaryHabits}</p>}
+                                        {selectedPatient.allergies?.length && <p>Allergies: {selectedPatient.allergies.join(', ')}</p>}
+                                        {selectedPatient.doshaType && <p>Dosha Type: {selectedPatient.doshaType}</p>}
+                                    </div>
+                                </div>
+                            )}
 
-                                                        {/* Optional Vitals */}
-                                                        {vital.temperature && (
-                                                            <div className="space-y-1">
-                                                                <span className="font-medium text-muted-foreground">Temperature</span>
-                                                                <p className="font-medium">{vital.temperature}°C</p>
-                                                            </div>
-                                                        )}
-                                                        {vital.pulse && (
-                                                            <div className="space-y-1">
-                                                                <span className="font-medium text-muted-foreground">Pulse</span>
-                                                                <p className="font-medium">{vital.pulse} bpm</p>
-                                                            </div>
-                                                        )}
-                                                        {vital.bloodSugar && (
-                                                            <div className="space-y-1">
-                                                                <span className="font-medium text-muted-foreground">Blood Sugar</span>
-                                                                <p className="font-medium">
-                                                                    Fasting: {vital.bloodSugar.fasting} mg/dL
-                                                                    {vital.bloodSugar.postPrandial && <br/>}
-                                                                    {vital.bloodSugar.postPrandial && `Post: ${vital.bloodSugar.postPrandial} mg/dL`}
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                            {/* Emergency Contact */}
+                            {selectedPatient.emergencyContact && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Emergency Contact:</span>
+                                    <div className="text-sm space-y-1">
+                                        <p>Name: {selectedPatient.emergencyContact.name || 'Not provided'}</p>
+                                        <p>Phone: {selectedPatient.emergencyContact.phone || 'Not provided'}</p>
+                                        <p>Relationship: {selectedPatient.emergencyContact.relationship || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                            )}
 
-                                                    {/* Lab Results */}
-                                                    {(vital.thyroid || vital.cholesterol) && (
-                                                        <div className="mt-4 pt-4 border-t">
-                                                            <h4 className="font-medium mb-2">Lab Results</h4>
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                                                {vital.thyroid && (
-                                                                    <div>
-                                                                        <span className="font-medium text-muted-foreground">Thyroid:</span>
-                                                                        <div className="ml-2 space-y-1">
-                                                                            {vital.thyroid.tsh && <div>TSH: {vital.thyroid.tsh} μIU/mL</div>}
-                                                                            {vital.thyroid.t3 && <div>T3: {vital.thyroid.t3} ng/dL</div>}
-                                                                            {vital.thyroid.t4 && <div>T4: {vital.thyroid.t4} μg/dL</div>}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                                {vital.cholesterol && (
-                                                                    <div>
-                                                                        <span className="font-medium text-muted-foreground">Cholesterol:</span>
-                                                                        <div className="ml-2 space-y-1">
-                                                                            <div>Total: {vital.cholesterol.total} mg/dL</div>
-                                                                            <div>HDL: {vital.cholesterol.hdl} mg/dL</div>
-                                                                            <div>LDL: {vital.cholesterol.ldl} mg/dL</div>
-                                                                            <div>Triglycerides: {vital.cholesterol.triglycerides} mg/dL</div>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Notes */}
-                                                    {vital.notes && (
-                                                        <div className="mt-4 pt-4 border-t">
-                                                            <span className="font-medium text-muted-foreground">Notes:</span>
-                                                            <p className="mt-1 text-sm">{vital.notes}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                                            <p className="text-muted-foreground">No vitals recorded yet.</p>
-                                            <p className="text-sm text-muted-foreground">Use the "Update Vitals" tab to record patient measurements.</p>
-                                        </div>
+                            {/* Vitals Summary */}
+                            <div>
+                                <span className="font-medium text-muted-foreground block mb-2">Vitals History:</span>
+                                <p className="text-sm text-muted-foreground">
+                                    {patientVitals.length} recorded vitals
+                                    {patientVitals.length > 0 && (
+                                        <span className="ml-2">
+                                            (Latest: {patientVitals[0]?.date ? new Date(patientVitals[0].date.seconds * 1000).toLocaleDateString() : 'Unknown'})
+                                        </span>
                                     )}
-                                </CardContent>
-                            </Card>
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Loading patient details...</p>
                         </div>
                     )}
                 </DialogContent>
@@ -1175,7 +785,7 @@ export function HospitalView() {
           <MealTrackingView />
         </TabsContent>
         <TabsContent value="vitals" className="mt-4 sm:mt-6">
-          <VitalsForm />
+          <VitalsForm showPatientSelection={false} />
         </TabsContent>
         <TabsContent value="mess-menu" className="mt-4 sm:mt-6">
           <MessMenuForm />

@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateInitialDietChart } from "@/ai/flows/generate-initial-diet-chart";
-import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus } from "lucide-react";
+import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus, BarChart3 } from "lucide-react";
 import { Label } from "../ui/label";
 import {
   Form,
@@ -25,6 +26,8 @@ import { z } from "zod";
 import type { Patient, Vitals, MessMenu, DietPlan } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { PatientProgress } from "./patient-progress";
+import { VitalsForm } from "./vitals-form";
 
 function DietGenerationForm() {
   const { toast } = useToast();
@@ -35,6 +38,8 @@ function DietGenerationForm() {
   const [currentMenu, setCurrentMenu] = useState<MessMenu | null>(null);
   const [generatedChart, setGeneratedChart] = useState<DietPlan | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editablePlan, setEditablePlan] = useState<DietPlan | null>(null);
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -137,6 +142,54 @@ function DietGenerationForm() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const startEditing = () => {
+    if (generatedChart) {
+      setEditablePlan({ ...generatedChart });
+      setIsEditing(true);
+    }
+  };
+
+  const saveEditedPlan = async () => {
+    if (!editablePlan || !selectedPatient) return;
+
+    setIsSaving(true);
+    try {
+      const savedPlan = await dietPlansService.create({
+        patientId: selectedPatient.id,
+        dietitianId: 'current-dietitian', // Should come from auth
+        title: editablePlan.title,
+        description: editablePlan.description,
+        dietDays: editablePlan.dietDays,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isActive: true,
+      });
+
+      toast({
+        title: "Diet Plan Saved",
+        description: "The customized diet plan has been saved and activated for the patient.",
+      });
+
+      // Reset form
+      setSelectedPatient(null);
+      setPatientVitals(null);
+      setCurrentMenu(null);
+      setGeneratedChart(null);
+      setEditablePlan(null);
+      setIsEditing(false);
+
+    } catch (error) {
+      console.error('Error saving diet plan:', error);
+      toast({
+        title: "Save Failed",
+        description: "Failed to save the diet plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -248,15 +301,15 @@ function DietGenerationForm() {
       </Card>
 
       {/* Generated Diet Chart */}
-      {generatedChart && (
+      {generatedChart && !isEditing && (
         <Card>
           <CardHeader>
             <CardTitle className="font-headline flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Generated Diet Chart
+              AI Generated Diet Chart
             </CardTitle>
             <CardDescription>
-              Review the AI-generated diet plan before saving.
+              Review the AI-generated diet plan. You can customize it before saving.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -274,7 +327,15 @@ function DietGenerationForm() {
               >
                 {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 <CheckCircle className="mr-2 h-4 w-4" />
-                Save & Activate Plan
+                Accept & Activate Plan
+              </Button>
+              <Button
+                variant="outline"
+                onClick={startEditing}
+                disabled={isSaving}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Customize Plan
               </Button>
               <Button
                 variant="outline"
@@ -288,6 +349,93 @@ function DietGenerationForm() {
           </CardContent>
         </Card>
       )}
+
+      {/* Diet Plan Editor */}
+      {isEditing && editablePlan && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Customize Diet Plan
+            </CardTitle>
+            <CardDescription>
+              Modify the AI-generated plan to better suit the patient's needs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Plan Title and Description */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="planTitle">Plan Title</Label>
+                <Input
+                  id="planTitle"
+                  value={editablePlan.title}
+                  onChange={(e) => setEditablePlan(prev => prev ? { ...prev, title: e.target.value } : null)}
+                  placeholder="e.g., Ayurvedic Diet Plan for Vata Imbalance"
+                />
+              </div>
+              <div>
+                <Label htmlFor="planDescription">Description</Label>
+                <Input
+                  id="planDescription"
+                  value={editablePlan.description}
+                  onChange={(e) => setEditablePlan(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  placeholder="Brief description of the diet plan"
+                />
+              </div>
+            </div>
+
+            {/* Diet Chart Content Editor */}
+            <div>
+              <Label htmlFor="dietChartContent">Diet Plan Content</Label>
+              <Textarea
+                id="dietChartContent"
+                value={(editablePlan as any).dietChart || ''}
+                onChange={(e) => setEditablePlan(prev => prev ? { ...prev, dietChart: e.target.value } : null)}
+                placeholder="Edit the diet plan content..."
+                rows={15}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            {/* Ayurvedic Notes */}
+            <div>
+              <Label htmlFor="ayurvedicNotes">Ayurvedic Principles & Notes</Label>
+              <Textarea
+                id="ayurvedicNotes"
+                value={(editablePlan as any).ayurvedicNotes || ''}
+                onChange={(e) => setEditablePlan(prev => prev ? { ...prev, ayurvedicNotes: e.target.value } : null)}
+                placeholder="Add specific Ayurvedic recommendations, dosha balancing notes, seasonal considerations..."
+                rows={4}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+              <Button
+                onClick={saveEditedPlan}
+                disabled={isSaving}
+                className="flex-1"
+              >
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Save Customized Plan
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditablePlan(null);
+                }}
+                disabled={isSaving}
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel Editing
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
@@ -295,6 +443,9 @@ function DietGenerationForm() {
 function PatientManagement() {
     const [patients, setPatients] = useState<Patient[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+    const [patientVitals, setPatientVitals] = useState<any[]>([]);
+    const [showPatientModal, setShowPatientModal] = useState(false);
 
     useEffect(() => {
         const fetchPatients = async () => {
@@ -311,8 +462,26 @@ function PatientManagement() {
         fetchPatients();
     }, []);
 
+    const handleViewPatientDetails = async (patient: Patient) => {
+        setSelectedPatient(patient);
+        setShowPatientModal(true);
+
+        try {
+            // Fetch patient's vitals history
+            const vitalsData = await vitalsService.getByPatient(patient.id);
+            setPatientVitals(vitalsData);
+        } catch (error: any) {
+            console.error("Error fetching patient vitals:", error);
+            setPatientVitals([]);
+            if (error.message && error.message.includes('requires an index')) {
+                console.warn('Vitals index is building. Patient details may load slower temporarily.');
+            }
+        }
+    };
+
     return (
-        <Card>
+        <>
+            <Card>
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2"><User /> Patient Management</CardTitle>
                 <CardDescription>View and manage your assigned patients.</CardDescription>
@@ -347,7 +516,13 @@ function PatientManagement() {
                                 <TableCell>{patient.gender}</TableCell>
                                 <TableCell className="font-mono">{patient.code}</TableCell>
                                 <TableCell>
-                                    <Button variant="outline" size="sm">View Details</Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleViewPatientDetails(patient)}
+                                    >
+                                        View Details
+                                    </Button>
                                 </TableCell>
                             </TableRow>
                             ))
@@ -359,7 +534,97 @@ function PatientManagement() {
                     </TableBody>
                 </Table>
             </CardContent>
-        </Card>
+            </Card>
+
+            {/* Patient Details Modal */}
+            <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
+                <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <User className="h-5 w-5" />
+                            Patient Details: {selectedPatient?.name}
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {selectedPatient ? (
+                        <div className="space-y-4">
+                            {/* Basic Information */}
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Patient Code:</span>
+                                    <p className="font-mono font-medium">{selectedPatient.code}</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Age:</span>
+                                    <p>{selectedPatient.age} years</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Gender:</span>
+                                    <p>{selectedPatient.gender}</p>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-muted-foreground">Registered:</span>
+                                    <p>{selectedPatient.registrationDate ? new Date(selectedPatient.registrationDate).toLocaleDateString() : 'Unknown'}</p>
+                                </div>
+                            </div>
+
+                            {/* Contact Information */}
+                            {(selectedPatient.email || selectedPatient.phone) && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Contact Information:</span>
+                                    <div className="text-sm space-y-1">
+                                        {selectedPatient.email && <p>Email: {selectedPatient.email}</p>}
+                                        {selectedPatient.phone && <p>Phone: {selectedPatient.phone}</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Health Information */}
+                            {(selectedPatient.dietaryHabits || selectedPatient.allergies?.length) && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Health Information:</span>
+                                    <div className="text-sm space-y-1">
+                                        {selectedPatient.dietaryHabits && <p>Dietary Habits: {selectedPatient.dietaryHabits}</p>}
+                                        {selectedPatient.allergies?.length && <p>Allergies: {selectedPatient.allergies.join(', ')}</p>}
+                                        {selectedPatient.doshaType && <p>Dosha Type: {selectedPatient.doshaType}</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Emergency Contact */}
+                            {selectedPatient.emergencyContact && (
+                                <div>
+                                    <span className="font-medium text-muted-foreground block mb-2">Emergency Contact:</span>
+                                    <div className="text-sm space-y-1">
+                                        <p>Name: {selectedPatient.emergencyContact.name || 'Not provided'}</p>
+                                        <p>Phone: {selectedPatient.emergencyContact.phone || 'Not provided'}</p>
+                                        <p>Relationship: {selectedPatient.emergencyContact.relationship || 'Not provided'}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Vitals Summary */}
+                            <div>
+                                <span className="font-medium text-muted-foreground block mb-2">Vitals History:</span>
+                                <p className="text-sm text-muted-foreground">
+                                    {patientVitals.length} recorded vitals
+                                    {patientVitals.length > 0 && (
+                                        <span className="ml-2">
+                                            (Latest: {patientVitals[0]?.date ? new Date(patientVitals[0].date.seconds * 1000).toLocaleDateString() : 'Unknown'})
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-8">
+                            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">Loading patient details...</p>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }
 
@@ -760,46 +1025,187 @@ Additional Remarks: ${consultationForm.remarks}
 
 function ConsultationsManagement() {
   const [consultations, setConsultations] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientConsultations, setPatientConsultations] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   useEffect(() => {
-    const fetchConsultations = async () => {
+    const fetchData = async () => {
       setIsLoading(true);
       try {
-        // For now, load all consultations. In production, filter by assigned dietitian
-        const consultationsData = await consultationsService.getAll();
+        // Load patients and consultations
+        const [patientsData, consultationsData] = await Promise.all([
+          patientsService.getAll(),
+          consultationsService.getAll()
+        ]);
+
+        setPatients(patientsData);
         setConsultations(consultationsData);
       } catch (error) {
-        console.error("Error fetching consultations: ", error);
+        console.error("Error fetching data: ", error);
       }
       setIsLoading(false);
     };
 
-    fetchConsultations();
+    fetchData();
   }, []);
 
+  const loadPatientHistory = async (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    setSelectedPatient(patient || null);
+
+    if (patient) {
+      setIsLoadingHistory(true);
+      try {
+        const history = await consultationsService.getByPatient(patientId);
+        setPatientConsultations(history);
+      } catch (error) {
+        console.error("Error loading patient consultation history:", error);
+      }
+      setIsLoadingHistory(false);
+    }
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline flex items-center gap-2"><Calendar /> Consultations</CardTitle>
-        <CardDescription>Manage patient consultations and appointments.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
+    <div className="space-y-6">
+      {/* Overall Consultations Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline flex items-center gap-2"><Calendar /> Consultations Overview</CardTitle>
+          <CardDescription>View all consultations and patient history.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
-              {consultations.length} consultation{consultations.length !== 1 ? 's' : ''} scheduled
+              {consultations.length} total consultation{consultations.length !== 1 ? 's' : ''} recorded
             </p>
-            <Button size="sm">
-              <Calendar className="mr-2 h-4 w-4" />
-              Schedule New
-            </Button>
           </div>
 
+          {/* Patient Selection for History */}
+          <div className="space-y-2 mb-6">
+            <Label htmlFor="patientHistory">View Consultation History</Label>
+            <select
+              id="patientHistory"
+              className="w-full p-2 border rounded-md"
+              onChange={(e) => loadPatientHistory(e.target.value)}
+              value={selectedPatient?.id || ''}
+            >
+              <option value="">Select a patient to view history...</option>
+              {patients.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.name} - {patient.code}
+                </option>
+              ))}
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Patient Consultation History */}
+      {selectedPatient && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Consultation History: {selectedPatient.name}
+            </CardTitle>
+            <CardDescription>
+              Complete consultation timeline for {selectedPatient.name} ({selectedPatient.code})
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingHistory ? (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-start space-x-4 p-4 border rounded-lg animate-pulse">
+                    <div className="w-10 h-10 bg-secondary rounded-full animate-pulse" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-secondary rounded animate-pulse w-1/4" />
+                      <div className="h-3 bg-secondary rounded animate-pulse w-3/4" />
+                      <div className="h-3 bg-secondary rounded animate-pulse w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : patientConsultations.length > 0 ? (
+              <div className="space-y-4">
+                {patientConsultations.map((consultation) => (
+                  <div key={consultation.id} className="flex items-start space-x-4 p-4 border rounded-lg">
+                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Stethoscope className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium">
+                          Consultation #{consultation.id.slice(-6)}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            consultation.status === 'completed' ? 'bg-green-100 text-green-800' :
+                            consultation.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {consultation.status}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {consultation.date.toDate().toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Consultation Notes Preview */}
+                      <div className="text-sm text-muted-foreground space-y-1">
+                        {consultation.notes && (
+                          <div>
+                            <span className="font-medium">Notes:</span>
+                            <p className="mt-1 line-clamp-2">{consultation.notes}</p>
+                          </div>
+                        )}
+                        {consultation.recommendations && (
+                          <div>
+                            <span className="font-medium">Recommendations:</span>
+                            <p className="mt-1 line-clamp-2">{consultation.recommendations}</p>
+                          </div>
+                        )}
+                        {consultation.followUpDate && (
+                          <div>
+                            <span className="font-medium">Follow-up:</span>
+                            <span className="ml-1">
+                              {consultation.followUpDate.toDate().toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No consultation history found.</p>
+                <p className="text-sm text-muted-foreground">
+                  Use the "New Consultation" tab to record the first consultation for this patient.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Consultations Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline">Recent Consultations</CardTitle>
+          <CardDescription>Latest consultation activity across all patients.</CardDescription>
+        </CardHeader>
+        <CardContent>
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg">
+                <div key={i} className="flex items-center space-x-4 p-4 border rounded-lg animate-pulse">
                   <div className="w-10 h-10 bg-secondary rounded-full animate-pulse" />
                   <div className="space-y-2 flex-1">
                     <div className="h-4 bg-secondary rounded animate-pulse w-1/4" />
@@ -810,33 +1216,46 @@ function ConsultationsManagement() {
             </div>
           ) : consultations.length > 0 ? (
             <div className="space-y-3">
-              {consultations.map((consultation) => (
-                <div key={consultation.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      <Stethoscope className="w-5 h-5 text-primary" />
+              {consultations.slice(0, 5).map((consultation) => {
+                const patient = patients.find(p => p.id === consultation.patientId);
+                return (
+                  <div key={consultation.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                        <Stethoscope className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {patient ? patient.name : 'Unknown Patient'} - Consultation #{consultation.id.slice(-6)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {consultation.date.toDate().toLocaleDateString()} • {consultation.status}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">Consultation #{consultation.id.slice(-6)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {consultation.date.toDate().toLocaleDateString()} • {consultation.status}
-                      </p>
-                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => patient && loadPatientHistory(patient.id)}
+                    >
+                      View History
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm">View Details</Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="text-center py-8">
               <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No consultations scheduled.</p>
-              <p className="text-sm text-muted-foreground">Schedule your first consultation.</p>
+              <p className="text-muted-foreground">No consultations recorded yet.</p>
+              <p className="text-sm text-muted-foreground">
+                Start with patient consultations using the "New Consultation" tab.
+              </p>
             </div>
           )}
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -844,7 +1263,7 @@ export function DietitianView() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <Tabs defaultValue="consultation">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto p-1">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 h-auto p-1">
           <TabsTrigger value="consultation" className="text-xs sm:text-sm py-2">
             <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">New Consultation</span>
@@ -854,6 +1273,16 @@ export function DietitianView() {
             <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">My Patients</span>
             <span className="sm:hidden">Patients</span>
+          </TabsTrigger>
+          <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2">
+            <Stethoscope className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Update Vitals</span>
+            <span className="sm:hidden">Vitals</span>
+          </TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs sm:text-sm py-2">
+            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Progress</span>
+            <span className="sm:hidden">Progress</span>
           </TabsTrigger>
           <TabsTrigger value="consultations" className="text-xs sm:text-sm py-2">
             <Calendar className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
@@ -876,6 +1305,12 @@ export function DietitianView() {
         </TabsContent>
         <TabsContent value="patients" className="mt-4 sm:mt-6">
           <PatientManagement />
+        </TabsContent>
+        <TabsContent value="vitals" className="mt-4 sm:mt-6">
+          <VitalsForm showPatientSelection={true} />
+        </TabsContent>
+        <TabsContent value="progress" className="mt-4 sm:mt-6">
+          <PatientProgress />
         </TabsContent>
         <TabsContent value="consultations" className="mt-4 sm:mt-6">
           <ConsultationsManagement />
