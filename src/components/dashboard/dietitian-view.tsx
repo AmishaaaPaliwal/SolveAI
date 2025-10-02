@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateInitialDietChart } from "@/ai/flows/generate-initial-diet-chart";
-import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus, BarChart3 } from "lucide-react";
+import { exportConsultationSummaryToPDF } from "@/lib/pdf-utils";
+import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus, BarChart3, Download, RefreshCw, Activity, BookOpen } from "lucide-react";
+import { AlternativeSuggestions } from "@/components/ui/alternative-suggestions";
 import { Label } from "../ui/label";
 import {
   Form,
@@ -28,6 +30,16 @@ import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PatientProgress } from "./patient-progress";
 import { VitalsForm } from "./vitals-form";
+import { PolicyReference } from "./policy-reference";
+import {
+  PatientOverviewCards,
+  MealAdherenceStats,
+  VitalTrends,
+  RealTimeStatusIndicators,
+  SummaryWidgets,
+  QuickActionButtons,
+  ConsultationSummaries
+} from "./monitoring";
 
 function DietGenerationForm() {
   const { toast } = useToast();
@@ -40,6 +52,8 @@ function DietGenerationForm() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editablePlan, setEditablePlan] = useState<DietPlan | null>(null);
+  const [altFoodName, setAltFoodName] = useState('');
+  const [altReason, setAltReason] = useState('');
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -408,6 +422,53 @@ function DietGenerationForm() {
                 placeholder="Add specific Ayurvedic recommendations, dosha balancing notes, seasonal considerations..."
                 rows={4}
               />
+            </div>
+
+            {/* Food Alternatives Helper */}
+            <div className="border-t pt-4">
+              <Label className="text-base font-medium">Food Alternatives</Label>
+              <p className="text-sm text-muted-foreground mb-3">
+                Need to substitute a food item? Use AI to find Ayurvedic-aligned alternatives.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label htmlFor="altFoodName" className="text-sm">Food to Replace</Label>
+                  <Input
+                    id="altFoodName"
+                    value={altFoodName}
+                    onChange={(e) => setAltFoodName(e.target.value)}
+                    placeholder="e.g., rice, wheat, milk"
+                    className="text-sm"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="altReason" className="text-sm">Reason for Replacement</Label>
+                  <Input
+                    id="altReason"
+                    value={altReason}
+                    onChange={(e) => setAltReason(e.target.value)}
+                    placeholder="e.g., allergy, digestive issues"
+                    className="text-sm"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <AlternativeSuggestions
+                    foodName={altFoodName || 'rice'}
+                    reason={altReason || 'general substitution'}
+                    trigger={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        disabled={!altFoodName.trim()}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Get Alternatives
+                      </Button>
+                    }
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -1142,6 +1203,14 @@ function ConsultationsManagement() {
                           Consultation #{consultation.id.slice(-6)}
                         </p>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => exportConsultationSummaryToPDF(consultation, selectedPatient!)}
+                          >
+                            <Download className="mr-1 h-3 w-3" />
+                            Export
+                          </Button>
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                             consultation.status === 'completed' ? 'bg-green-100 text-green-800' :
                             consultation.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
@@ -1233,13 +1302,25 @@ function ConsultationsManagement() {
                         </p>
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => patient && loadPatientHistory(patient.id)}
-                    >
-                      View History
-                    </Button>
+                    <div className="flex gap-2">
+                      {patient && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => exportConsultationSummaryToPDF(consultation, patient)}
+                        >
+                          <Download className="mr-1 h-3 w-3" />
+                          Export
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => patient && loadPatientHistory(patient.id)}
+                      >
+                        View History
+                      </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -1262,8 +1343,8 @@ function ConsultationsManagement() {
 export function DietitianView() {
   return (
     <div className="space-y-4 sm:space-y-6">
-      <Tabs defaultValue="consultation">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 h-auto p-1">
+      <Tabs defaultValue="monitoring">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-9 h-auto p-1">
           <TabsTrigger value="consultation" className="text-xs sm:text-sm py-2">
             <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">New Consultation</span>
@@ -1294,10 +1375,20 @@ export function DietitianView() {
             <span className="hidden sm:inline">Generate Plans</span>
             <span className="sm:hidden">AI Plans</span>
           </TabsTrigger>
+          <TabsTrigger value="policies" className="text-xs sm:text-sm py-2">
+            <BookOpen className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">AYUSH Policies</span>
+            <span className="sm:hidden">Policies</span>
+          </TabsTrigger>
           <TabsTrigger value="plans" className="text-xs sm:text-sm py-2">
             <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Diet Plans</span>
             <span className="sm:hidden">Plans</span>
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2">
+            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Monitoring</span>
+            <span className="sm:hidden">Monitor</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="consultation" className="mt-4 sm:mt-6">
@@ -1318,10 +1409,30 @@ export function DietitianView() {
         <TabsContent value="generate-plan" className="mt-4 sm:mt-6">
           <DietGenerationForm />
         </TabsContent>
+        <TabsContent value="policies" className="mt-4 sm:mt-6">
+          <PolicyReference />
+        </TabsContent>
         <TabsContent value="plans" className="mt-4 sm:mt-6">
           <div className="text-center py-8">
             <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <p className="text-muted-foreground">Diet plans management coming soon.</p>
+          </div>
+        </TabsContent>
+        <TabsContent value="monitoring" className="mt-4 sm:mt-6">
+          <div className="space-y-6">
+            <SummaryWidgets />
+            <RealTimeStatusIndicators />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PatientOverviewCards />
+              <div className="space-y-6">
+                <MealAdherenceStats />
+                <VitalTrends />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ConsultationSummaries />
+              <QuickActionButtons />
+            </div>
           </div>
         </TabsContent>
       </Tabs>

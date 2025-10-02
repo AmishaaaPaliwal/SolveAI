@@ -16,7 +16,10 @@ const dietPlans_1 = __importDefault(require("./routes/dietPlans"));
 const messMenus_1 = __importDefault(require("./routes/messMenus"));
 const vitals_1 = __importDefault(require("./routes/vitals"));
 const mealTracking_1 = __importDefault(require("./routes/mealTracking"));
+const consultations_1 = __importDefault(require("./routes/consultations"));
+const patientFeedback_1 = __importDefault(require("./routes/patientFeedback"));
 const ai_1 = __importDefault(require("./routes/ai"));
+const foods_1 = __importDefault(require("./routes/foods"));
 // Initialize Express app
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
@@ -42,9 +45,12 @@ app.use('/api/diet-plans', dietPlans_1.default);
 app.use('/api/mess-menus', messMenus_1.default);
 app.use('/api/vitals', vitals_1.default);
 app.use('/api/meal-tracking', mealTracking_1.default);
+app.use('/api/consultations', consultations_1.default);
+app.use('/api/patient-feedback', patientFeedback_1.default);
 app.use('/api/ai', ai_1.default);
-// 404 handler
-app.use('*', (req, res) => {
+app.use('/api/foods', foods_1.default);
+// 404 handler - must be placed after all other routes
+app.use((req, res) => {
     res.status(404).json({
         error: 'Route not found',
         message: `Cannot ${req.method} ${req.originalUrl}`

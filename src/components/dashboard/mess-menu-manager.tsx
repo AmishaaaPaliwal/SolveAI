@@ -12,8 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Search, Edit, Trash2, Leaf, Apple, Wheat, Milk, Beef, ChefHat, Cookie, Coffee, Soup } from "lucide-react";
+import { Plus, Search, Edit, Trash2, Leaf, Apple, Wheat, Milk, Beef, ChefHat, Cookie, Coffee, Soup, RefreshCw } from "lucide-react";
+import { AlternativeSuggestions } from "@/components/ui/alternative-suggestions";
 import { foodDatabaseService, messMenusService } from "@/lib/firestore";
+import { useAuth } from "@/lib/auth";
 import type { FoodItem, MessMenu, MessMenuItem, NutritionalData, AyurvedicProperties } from "@/lib/types";
 
 const getCategoryIcon = (category: FoodItem['category']) => {
@@ -248,6 +250,15 @@ function MenuItemEditor({ item, onUpdate, onRemove }: {
         )}
       </div>
       <div className="flex gap-2">
+        <AlternativeSuggestions
+          foodName={item.name}
+          reason="Need alternative for mess menu item"
+          trigger={
+            <Button size="sm" variant="outline" title="Find alternatives">
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          }
+        />
         <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
           <Edit className="h-4 w-4" />
         </Button>
@@ -261,6 +272,7 @@ function MenuItemEditor({ item, onUpdate, onRemove }: {
 
 export function MessMenuManager() {
   const { toast } = useToast();
+  const { userProfile } = useAuth();
   const [currentMenu, setCurrentMenu] = useState<MessMenu | null>(null);
   const [menuItems, setMenuItems] = useState<{
     breakfast: MessMenuItem[];
@@ -283,7 +295,7 @@ export function MessMenuManager() {
 
   const loadTodayMenu = async () => {
     try {
-      const hospitalId = 'default-hospital'; // Should come from auth context
+      const hospitalId = userProfile?.hospitalId || 'default-hospital';
       const todayMenus = await messMenusService.getTodayMenu(hospitalId);
       if (todayMenus.length > 0) {
         const menu = todayMenus[0];
@@ -340,7 +352,7 @@ export function MessMenuManager() {
   const saveMenu = async () => {
     try {
       setIsLoading(true);
-      const hospitalId = 'default-hospital'; // Should come from auth context
+      const hospitalId = userProfile?.hospitalId || 'default-hospital';
 
       const menuData = {
         hospitalId,

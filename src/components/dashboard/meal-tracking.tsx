@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle, Clock, User, Utensils, XCircle, AlertCircle, Wifi, WifiOff, RefreshCw } from "lucide-react";
 import { mealTrackingService } from "@/lib/firestore";
+import { getCurrentUserId } from "@/lib/auth";
 import type { MealTracking, Patient, DietPlan } from "@/lib/types";
 
 interface MealTrackingProps {
@@ -53,11 +56,103 @@ function QuantityBadge({ quantity }: { quantity?: MealTracking['quantity'] }) {
   );
 }
 
+interface BaseDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  notes: string;
+  onNotesChange: (notes: string) => void;
+  onSubmit: () => void;
+}
+
+interface EatenDialogProps extends BaseDialogProps {
+  quantity: MealTracking['quantity'];
+}
+
+function MarkGivenDialog({ open, onOpenChange, notes, onNotesChange, onSubmit }: BaseDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mark Meal as Given</DialogTitle>
+          <DialogDescription>
+            Add any remarks about serving this meal to the patient.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="given-notes">Remarks (optional)</Label>
+            <Textarea
+              id="given-notes"
+              placeholder="Enter any notes about the meal service..."
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit}>
+            Mark as Given
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MarkEatenDialog({ open, onOpenChange, notes, onNotesChange, onSubmit, quantity }: EatenDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Mark Meal as {quantity === 'none' ? 'Skipped' : 'Eaten'}</DialogTitle>
+          <DialogDescription>
+            Add any remarks about the meal consumption.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Quantity: {quantity === 'none' ? 'Skipped' : quantity}</Label>
+          </div>
+          <div>
+            <Label htmlFor="eaten-notes">Remarks (optional)</Label>
+            <Textarea
+              id="eaten-notes"
+              placeholder="Enter any notes about the meal consumption..."
+              value={notes}
+              onChange={(e) => onNotesChange(e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit}>
+            Confirm
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) {
   const { toast } = useToast();
   const [mealTracking, setMealTracking] = useState<MealTracking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [realTimeEnabled, setRealTimeEnabled] = useState(true);
+
+  // Dialog states
+  const [givenDialogOpen, setGivenDialogOpen] = useState(false);
+  const [eatenDialogOpen, setEatenDialogOpen] = useState(false);
+  const [selectedMealId, setSelectedMealId] = useState<string | null>(null);
+  const [notes, setNotes] = useState('');
+  const [selectedQuantity, setSelectedQuantity] = useState<MealTracking['quantity']>('full');
 
   useEffect(() => {
     loadMealTracking();
@@ -94,13 +189,24 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
     }
   };
 
-  const handleMarkAsGiven = async (mealTrackingId: string) => {
+  const handleMarkAsGiven = (mealTrackingId: string) => {
+    setSelectedMealId(mealTrackingId);
+    setNotes('');
+    setGivenDialogOpen(true);
+  };
+
+  const handleGivenSubmit = async () => {
+    if (!selectedMealId) return;
+
     try {
-      await mealTrackingService.markAsGiven(mealTrackingId, 'hospital-staff');
+      await mealTrackingService.markAsGiven(selectedMealId, 'hospital-staff', notes.trim() || undefined);
       toast({
         title: "Meal Marked as Given",
         description: "The meal has been marked as served to the patient.",
       });
+      setGivenDialogOpen(false);
+      setSelectedMealId(null);
+      setNotes('');
       loadMealTracking(); // Refresh data
     } catch (error) {
       console.error('Error marking meal as given:', error);
@@ -112,13 +218,26 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
     }
   };
 
-  const handleMarkAsEaten = async (mealTrackingId: string, eatenBy: 'patient' | 'family', quantity: MealTracking['quantity']) => {
+  const handleMarkAsEaten = (mealTrackingId: string, eatenBy: 'patient' | 'family', quantity: MealTracking['quantity']) => {
+    setSelectedMealId(mealTrackingId);
+    setSelectedQuantity(quantity);
+    setNotes('');
+    setEatenDialogOpen(true);
+  };
+
+  const handleEatenSubmit = async (eatenBy: 'patient' | 'family') => {
+    if (!selectedMealId) return;
+
     try {
-      await mealTrackingService.markAsEaten(mealTrackingId, eatenBy, quantity);
+      await mealTrackingService.markAsEaten(selectedMealId, eatenBy, selectedQuantity, notes.trim() || undefined);
       toast({
         title: "Meal Status Updated",
-        description: `Meal marked as ${quantity === 'none' ? 'skipped' : `eaten (${quantity}) by ${eatenBy}`}.`,
+        description: `Meal marked as ${selectedQuantity === 'none' ? 'skipped' : `eaten (${selectedQuantity}) by ${eatenBy}`}.`,
       });
+      setEatenDialogOpen(false);
+      setSelectedMealId(null);
+      setNotes('');
+      setSelectedQuantity('full');
       loadMealTracking(); // Refresh data
     } catch (error) {
       console.error('Error marking meal as eaten:', error);
@@ -171,6 +290,30 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
       }
 
       await Promise.all(mealPromises);
+
+      // Schedule meal reminders for the patient
+      try {
+        const userId = getCurrentUserId();
+        if (!userId) {
+          console.warn('No current user found for scheduling meal reminders');
+          return;
+        }
+
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+        const response = await fetch(`${backendUrl}/api/notifications/schedule-meal-reminders`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'user-id': userId,
+          },
+        });
+
+        if (!response.ok) {
+          console.warn('Failed to schedule meal reminders:', response.statusText);
+        }
+      } catch (error) {
+        console.warn('Error scheduling meal reminders:', error);
+      }
 
       toast({
         title: "Meals Generated",
@@ -340,6 +483,23 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
           </div>
         )}
       </CardContent>
+
+      {/* Dialogs */}
+      <MarkGivenDialog
+        open={givenDialogOpen}
+        onOpenChange={setGivenDialogOpen}
+        notes={notes}
+        onNotesChange={setNotes}
+        onSubmit={handleGivenSubmit}
+      />
+      <MarkEatenDialog
+        open={eatenDialogOpen}
+        onOpenChange={setEatenDialogOpen}
+        notes={notes}
+        onNotesChange={setNotes}
+        onSubmit={() => handleEatenSubmit('patient')}
+        quantity={selectedQuantity}
+      />
     </Card>
   );
 }

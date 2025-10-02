@@ -8,7 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Bot, Send, User } from "lucide-react";
 import { personalDietChatbot } from "@/ai/flows/personal-diet-chatbot";
-import { mockDietChart } from "@/lib/data";
+import { dietPlansService } from "@/lib/firestore";
+import { useAuth } from "@/lib/auth";
 
 interface Message {
   sender: 'user' | 'bot';
@@ -16,6 +17,7 @@ interface Message {
 }
 
 export function PersonalChatbot() {
+  const { userProfile } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'bot',
@@ -34,9 +36,22 @@ export function PersonalChatbot() {
     setIsLoading(true);
 
     try {
-      const dietPlanString = JSON.stringify(mockDietChart);
+      // Fetch user's diet plan
+      let dietPlanString = 'No diet plan available';
+      if (userProfile?.patientId) {
+        try {
+          const plans = await dietPlansService.getByPatient(userProfile.patientId);
+          const activePlan = plans.find(plan => plan.isActive) || plans[0];
+          if (activePlan) {
+            dietPlanString = JSON.stringify(activePlan);
+          }
+        } catch (planError) {
+          console.warn('Could not fetch diet plan for chatbot:', planError);
+        }
+      }
+
       const response = await personalDietChatbot({
-        patientName: 'Guest User',
+        patientName: userProfile?.displayName || 'User',
         carePlanDetails: `Here is the diet plan: ${dietPlanString}`,
         question: input,
       });

@@ -140,6 +140,108 @@ router.get('/health', async (req, res) => {
         });
     }
 });
+// POST /api/ai/tts - Text to Speech
+router.post('/tts', async (req, res) => {
+    try {
+        const { text, languageCode, voiceName } = req.body;
+        if (!text) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required field: text'
+            });
+        }
+        const audioBuffer = await ai_1.aiService.textToSpeech(text, languageCode, voiceName);
+        res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': audioBuffer.length,
+        });
+        res.send(audioBuffer);
+    }
+    catch (error) {
+        console.error('TTS Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to synthesize speech',
+            message: error.message
+        });
+    }
+});
+// POST /api/ai/stt - Speech to Text
+router.post('/stt', async (req, res) => {
+    try {
+        const { audio, languageCode } = req.body;
+        if (!audio) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required field: audio (base64 encoded)'
+            });
+        }
+        const audioBuffer = Buffer.from(audio, 'base64');
+        const transcription = await ai_1.aiService.speechToText(audioBuffer, languageCode);
+        res.json({
+            success: true,
+            data: { transcription }
+        });
+    }
+    catch (error) {
+        console.error('STT Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to transcribe audio',
+            message: error.message
+        });
+    }
+});
+// GET /api/ai/weather - Get weather by coordinates
+router.get('/weather', async (req, res) => {
+    try {
+        const { lat, lon } = req.query;
+        if (!lat || !lon) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required query parameters: lat, lon'
+            });
+        }
+        const weather = await ai_1.aiService.getWeather(parseFloat(lat), parseFloat(lon));
+        res.json({
+            success: true,
+            data: weather
+        });
+    }
+    catch (error) {
+        console.error('Weather Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get weather data',
+            message: error.message
+        });
+    }
+});
+// GET /api/ai/weather/city - Get weather by city name
+router.get('/weather/city', async (req, res) => {
+    try {
+        const { city } = req.query;
+        if (!city) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required query parameter: city'
+            });
+        }
+        const weather = await ai_1.aiService.getWeatherByCity(city);
+        res.json({
+            success: true,
+            data: weather
+        });
+    }
+    catch (error) {
+        console.error('Weather Error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get weather data',
+            message: error.message
+        });
+    }
+});
 // GET /api/ai/cache/clear - Clear AI response cache (admin only)
 router.post('/cache/clear', async (req, res) => {
     try {

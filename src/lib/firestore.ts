@@ -8,6 +8,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
   orderBy,
@@ -427,20 +428,22 @@ export const mealTrackingService = {
     FirestoreService.update<MealTracking>('mealTracking', id, data),
 
   // Mark meal as given
-  markAsGiven: (id: string, givenBy: string) =>
+  markAsGiven: (id: string, givenBy: string, notes?: string) =>
     FirestoreService.update<MealTracking>('mealTracking', id, {
       givenBy,
       givenAt: new Date(),
-      status: 'given'
+      status: 'given',
+      ...(notes && { notes })
     }),
 
   // Mark meal as eaten
-  markAsEaten: (id: string, eatenBy: 'patient' | 'family', quantity?: 'full' | 'half' | 'quarter' | 'none') =>
+  markAsEaten: (id: string, eatenBy: 'patient' | 'family', quantity?: 'full' | 'half' | 'quarter' | 'none', notes?: string) =>
     FirestoreService.update<MealTracking>('mealTracking', id, {
       eatenBy,
       eatenAt: new Date(),
       quantity,
-      status: quantity === 'none' ? 'skipped' : 'eaten'
+      status: quantity === 'none' ? 'skipped' : 'eaten',
+      ...(notes && { notes })
     }),
 
   // Delete meal tracking record
@@ -505,6 +508,78 @@ export const patientFeedbackService = {
     ),
 };
 
+export const usersService = {
+  // Get all users
+  getAll: () => FirestoreService.getAll<User>('users'),
+
+  // Get user by ID (uid)
+  getById: (uid: string) => FirestoreService.getById<User>('users', uid),
+
+  // Get users by role
+  getByRole: (role: User['role']) =>
+    FirestoreService.getAll<User>('users', [where('role', '==', role)]),
+
+  // Get users by hospital
+  getByHospital: (hospitalId: string) =>
+    FirestoreService.getAll<User>('users', [where('hospitalId', '==', hospitalId)]),
+
+  // Create user (uid as document ID)
+  create: async (data: User) => {
+    const docRef = doc(db, 'users', data.uid);
+    await setDoc(docRef, {
+      ...data,
+      createdAt: Timestamp.fromDate(data.createdAt),
+      lastLogin: Timestamp.fromDate(data.lastLogin),
+    });
+    return data;
+  },
+
+  // Update user
+  update: async (uid: string, data: Partial<Omit<User, 'uid'>>) => {
+    const docRef = doc(db, 'users', uid);
+    await updateDoc(docRef, data);
+  },
+
+  // Delete user
+  delete: (uid: string) => FirestoreService.delete('users', uid),
+
+  // Subscribe to users
+  subscribe: (callback: (users: User[]) => void, constraints?: QueryConstraint[]) =>
+    FirestoreService.subscribeToCollection<User>('users', callback, constraints || []),
+};
+
+export const hospitalsService = {
+  // Get all hospitals
+  getAll: () => FirestoreService.getAll<Hospital>('hospitals'),
+
+  // Get hospital by ID
+  getById: (id: string) => FirestoreService.getById<Hospital>('hospitals', id),
+
+  // Get hospitals by admin
+  getByAdmin: (adminId: string) =>
+    FirestoreService.getAll<Hospital>('hospitals', [where('adminId', '==', adminId)]),
+
+  // Create hospital
+  create: async (data: Omit<Hospital, 'id'>) => {
+    const docRef = await addDoc(collection(db, 'hospitals'), {
+      ...data,
+      createdAt: Timestamp.fromDate(data.createdAt),
+    });
+    return { ...data, id: docRef.id } as Hospital;
+  },
+
+  // Update hospital
+  update: (id: string, data: Partial<Omit<Hospital, 'id'>>) =>
+    FirestoreService.update<Hospital>('hospitals', id, data),
+
+  // Delete hospital
+  delete: (id: string) => FirestoreService.delete('hospitals', id),
+
+  // Subscribe to hospitals
+  subscribe: (callback: (hospitals: Hospital[]) => void, constraints?: QueryConstraint[]) =>
+    FirestoreService.subscribeToCollection<Hospital>('hospitals', callback, constraints || []),
+};
+
 // Food database service for Ayurvedic food items
 export const foodDatabaseService = {
   // Get all food items
@@ -558,5 +633,102 @@ export const foodDatabaseService = {
   delete: (id: string) => FirestoreService.delete('foodDatabase', id),
 };
 
+// Sample data seeding functions for development
+export const seedData = {
+  async seedHospitals(): Promise<Hospital[]> {
+    const sampleHospitals = [
+      {
+        name: 'City General Hospital',
+        address: '123 Main Street, City, State 12345',
+        phone: '+1-555-0123',
+        email: 'admin@citygeneral.com',
+        adminId: 'hospital-admin-uid-1',
+        createdAt: new Date(),
+      },
+      {
+        name: 'Regional Medical Center',
+        address: '456 Health Ave, Town, State 67890',
+        phone: '+1-555-0456',
+        email: 'admin@regionalmed.com',
+        adminId: 'hospital-admin-uid-2',
+        createdAt: new Date(),
+      },
+    ];
+
+    const createdHospitals: Hospital[] = [];
+    for (const hospital of sampleHospitals) {
+      try {
+        const created = await hospitalsService.create(hospital);
+        createdHospitals.push(created);
+        console.log(`Seeded hospital: ${hospital.name}`);
+      } catch (error) {
+        console.error(`Error seeding hospital ${hospital.name}:`, error);
+      }
+    }
+    return createdHospitals;
+  },
+
+  async seedUsers(hospitals: Hospital[]) {
+    const hospitalMap = hospitals.reduce((map, h) => {
+      map[h.name] = h.id;
+      return map;
+    }, {} as Record<string, string>);
+
+    const sampleUsers = [
+      {
+        uid: 'hospital-admin-uid-1',
+        email: 'admin@citygeneral.com',
+        displayName: 'Dr. Sarah Johnson',
+        role: 'hospital-admin' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'dietitian-uid-1',
+        email: 'dietitian@citygeneral.com',
+        displayName: 'Dr. Michael Chen',
+        role: 'dietitian' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'patient-uid-1',
+        email: 'patient1@citygeneral.com',
+        displayName: 'Alice Smith',
+        role: 'patient' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        patientId: 'patient-id-1',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'hospital-admin-uid-2',
+        email: 'admin@regionalmed.com',
+        displayName: 'Dr. Robert Davis',
+        role: 'hospital-admin' as const,
+        hospitalId: hospitalMap['Regional Medical Center'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+    ];
+
+    for (const user of sampleUsers) {
+      try {
+        await usersService.create(user);
+        console.log(`Seeded user: ${user.displayName}`);
+      } catch (error) {
+        console.error(`Error seeding user ${user.displayName}:`, error);
+      }
+    }
+  },
+
+  async seedAll() {
+    const hospitals = await this.seedHospitals();
+    await this.seedUsers(hospitals);
+  },
+};
+
 // Import types (you'll need to define these in your types file)
-import type { Patient, DietPlan, Consultation, MessMenu, Vitals, MealTracking, PatientFeedback, FoodItem } from './types';
+import type { Patient, DietPlan, Consultation, MessMenu, Vitals, MealTracking, PatientFeedback, FoodItem, User, Hospital } from './types';

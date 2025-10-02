@@ -20,6 +20,7 @@ Backend API server for the AyurTrack Ayurvedic Diet Management platform.
 - Redis caching for performance optimization
 - AI-powered diet plan generation using Vertex AI
 - Ayurvedic dosha analysis and food alternatives
+- Weather API integration (WeatherAPI.com) for location-based recommendations
 - Comprehensive error handling and logging
 - Health check endpoints
 

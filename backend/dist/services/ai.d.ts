@@ -2,6 +2,14 @@ declare class AIService {
     private model;
     constructor();
     /**
+     * Extract food names from diet plan text
+     */
+    private extractFoodNames;
+    /**
+     * Get nutritional data for foods from IFCT database
+     */
+    private getNutritionalData;
+    /**
      * Generate personalized Ayurvedic diet plan
      */
     generateDietPlan(patientData: {
@@ -13,6 +21,7 @@ declare class AIService {
         dietChart: string;
         recommendations: string[];
         warnings: string[];
+        nutritionalData?: any[];
     }>;
     /**
      * Analyze patient dosha based on symptoms and characteristics
@@ -49,8 +58,24 @@ declare class AIService {
         rationale: string;
     }>;
     /**
-     * Health check for AI service
-     */
+      * Synthesize speech from text using Google TTS
+      */
+    textToSpeech(text: string, languageCode?: string, voiceName?: string): Promise<Buffer>;
+    /**
+      * Transcribe audio to text using Google STT
+      */
+    speechToText(audioBuffer: Buffer, languageCode?: string): Promise<string>;
+    /**
+      * Get current weather data
+      */
+    getWeather(lat: number, lon: number): Promise<any>;
+    /**
+      * Get weather by city name
+      */
+    getWeatherByCity(city: string): Promise<any>;
+    /**
+      * Health check for AI service
+      */
     healthCheck(): Promise<boolean>;
 }
 export declare const aiService: AIService;

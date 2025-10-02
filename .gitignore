@@ -40,6 +40,8 @@ next-env.d.ts
 
 .genkit/*
 .env*
+google-credentials-solveai.json
+backend/google-credentials.json
 
 # firebase
 firebase-debug.log

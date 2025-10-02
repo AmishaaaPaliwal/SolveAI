@@ -1,10 +1,16 @@
 "use strict";
 // AI Service using LangChain + Vertex AI for Ayurvedic diet generation
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiService = void 0;
 const google_vertexai_1 = require("@langchain/google-vertexai");
 const prompts_1 = require("@langchain/core/prompts");
 const redis_1 = require("./redis");
+const ifct_1 = __importDefault(require("./ifct"));
+const google_cloud_1 = require("./google-cloud");
+const weather_1 = require("./weather");
 class AIService {
     constructor() {
         this.model = new google_vertexai_1.ChatVertexAI({
@@ -14,6 +20,57 @@ class AIService {
             topK: 40,
             topP: 0.8,
         });
+    }
+    /**
+     * Extract food names from diet plan text
+     */
+    extractFoodNames(dietChart) {
+        // Simple regex to extract food names (this could be improved with NLP)
+        const foodPatterns = [
+            /\b(?:rice|wheat|milk|curd|yogurt|butter|ghee|oil|salt|sugar|honey|tea|coffee|bread|chapati|roti|dal|lentils|beans|peas|potato|tomato|onion|garlic|ginger|turmeric|cumin|coriander|cardamom|cinnamon|cloves|pepper|chili|spinach|carrot|cucumber|lettuce|apple|banana|mango|orange|grapes|lemon|lime|almonds|cashews|raisins|dates|chicken|fish|egg|mutton|beef)\b/gi
+        ];
+        const foods = new Set();
+        foodPatterns.forEach(pattern => {
+            const matches = dietChart.match(pattern);
+            if (matches) {
+                matches.forEach(match => foods.add(match.toLowerCase()));
+            }
+        });
+        return Array.from(foods);
+    }
+    /**
+     * Get nutritional data for foods from IFCT database
+     */
+    async getNutritionalData(foodNames) {
+        const nutritionalData = [];
+        for (const foodName of foodNames.slice(0, 10)) { // Limit to 10 foods to avoid overload
+            try {
+                const ifctFoods = ifct_1.default.findFood(foodName);
+                if (ifctFoods.length > 0) {
+                    // Take the first match (could be improved with better matching)
+                    const food = ifctFoods[0];
+                    nutritionalData.push({
+                        name: food.name,
+                        code: food.code,
+                        nutrients: {
+                            energy: food.energy_kcal || food.energy || 0,
+                            protein: food.protein || 0,
+                            fat: food.fat || 0,
+                            carbohydrates: food.carbohydrates || food.carbs || 0,
+                            fiber: food.fiber || 0,
+                            calcium: food.calcium || 0,
+                            iron: food.iron || 0,
+                            vitaminC: food.vitamin_c || 0,
+                            // Add more nutrients as needed
+                        }
+                    });
+                }
+            }
+            catch (error) {
+                console.warn(`Failed to get nutritional data for ${foodName}:`, error);
+            }
+        }
+        return nutritionalData;
     }
     /**
      * Generate personalized Ayurvedic diet plan
@@ -126,7 +183,12 @@ Analyze the dosha imbalance and provide recommendations.
                 preferences: patientData.preferences.join(', ')
             });
             const response = await this.model.invoke(formattedPrompt);
-            const result = JSON.parse(response.content);
+            let result = JSON.parse(response.content);
+            // Extract food names and get nutritional data from IFCT
+            const foodNames = this.extractFoodNames(result.dietChart || '');
+            const nutritionalData = await this.getNutritionalData(foodNames);
+            // Add nutritional data to the result
+            result.nutritionalData = nutritionalData;
             // Cache the result
             await redis_1.redisService.cacheAIResponse(cacheKey, result);
             return result;
@@ -231,8 +293,64 @@ Generate optimal meal timings for this constitution and lifestyle.
         }
     }
     /**
-     * Health check for AI service
-     */
+      * Synthesize speech from text using Google TTS
+      */
+    async textToSpeech(text, languageCode = 'en-US', voiceName = 'en-US-Neural2-D') {
+        try {
+            return await (0, google_cloud_1.synthesizeSpeech)(text, languageCode, voiceName);
+        }
+        catch (error) {
+            console.error('TTS Error:', error);
+            throw new Error('Failed to synthesize speech');
+        }
+    }
+    /**
+      * Transcribe audio to text using Google STT
+      */
+    async speechToText(audioBuffer, languageCode = 'en-US') {
+        try {
+            return await (0, google_cloud_1.transcribeAudio)(audioBuffer, languageCode);
+        }
+        catch (error) {
+            console.error('STT Error:', error);
+            throw new Error('Failed to transcribe audio');
+        }
+    }
+    /**
+      * Get current weather data
+      */
+    async getWeather(lat, lon) {
+        try {
+            const weather = await (0, weather_1.getCurrentWeather)(lat, lon);
+            if (!weather) {
+                throw new Error('Weather data not available');
+            }
+            return weather;
+        }
+        catch (error) {
+            console.error('Weather Error:', error);
+            throw new Error('Failed to get weather data');
+        }
+    }
+    /**
+      * Get weather by city name
+      */
+    async getWeatherByCity(city) {
+        try {
+            const weather = await (0, weather_1.getWeatherByCity)(city);
+            if (!weather) {
+                throw new Error('Weather data not available');
+            }
+            return weather;
+        }
+        catch (error) {
+            console.error('Weather Error:', error);
+            throw new Error('Failed to get weather data');
+        }
+    }
+    /**
+      * Health check for AI service
+      */
     async healthCheck() {
         try {
             const response = await this.model.invoke('Say "AI service is healthy" in exactly those words.');

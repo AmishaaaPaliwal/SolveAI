@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { User, UtensilsCrossed, Link2, HeartPulse, X, Calendar, Activity, CheckSquare } from "lucide-react";
+import { User, UtensilsCrossed, Link2, HeartPulse, X, Calendar, Activity, CheckSquare, Download, BarChart3 } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -17,10 +17,22 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "../ui/label";
 import { patientsService, messMenusService, vitalsService, dietPlansService } from "@/lib/firestore";
+import { exportHospitalRecordsToPDF } from "@/lib/pdf-utils";
+import { useAuth } from "@/lib/auth";
 import type { Patient, MessMenu, MessMenuItem, Vitals, DietPlan } from "@/lib/types";
 import { MealTrackingComponent } from "./meal-tracking";
 import { VitalsForm } from "./vitals-form";
 import { MessMenuManager } from "./mess-menu-manager";
+import { PatientProgress } from "./patient-progress";
+import {
+  PatientOverviewCards,
+  MealAdherenceStats,
+  VitalTrends,
+  RealTimeStatusIndicators,
+  SummaryWidgets,
+  QuickActionButtons,
+  ConsultationSummaries
+} from "./monitoring";
 
 
 function LinkPatientForm() {
@@ -182,15 +194,14 @@ function LinkPatientForm() {
 
 function MessMenuForm() {
     const { toast } = useToast();
+    const { userProfile } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [currentMenu, setCurrentMenu] = useState<MessMenu | null>(null);
 
     useEffect(() => {
         const loadTodayMenu = async () => {
             try {
-                // For now, assume hospital ID is 'default-hospital'
-                // In production, this should come from auth context
-                const hospitalId = 'default-hospital';
+                const hospitalId = userProfile?.hospitalId || 'default-hospital';
                 const todayMenus = await messMenusService.getTodayMenu(hospitalId);
                 if (todayMenus.length > 0) {
                     setCurrentMenu(todayMenus[0]);
@@ -232,7 +243,7 @@ function MessMenuForm() {
             };
 
             const messMenuData = {
-                hospitalId: 'default-hospital', // Should come from auth context
+                hospitalId: userProfile?.hospitalId || 'default-hospital',
                 date: new Date(),
                 meals: {
                     breakfast: parseMenuItems(menuItems.filter(item =>
@@ -658,10 +669,20 @@ function PatientManagement() {
             <Dialog open={showPatientModal} onOpenChange={setShowPatientModal}>
                 <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <User className="h-5 w-5" />
-                            Patient Details: {selectedPatient?.name}
-                        </DialogTitle>
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="flex items-center gap-2">
+                                <User className="h-5 w-5" />
+                                Patient Details: {selectedPatient?.name}
+                            </DialogTitle>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => exportHospitalRecordsToPDF(selectedPatient!, patientVitals, [])}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Export Records
+                            </Button>
+                        </div>
                     </DialogHeader>
 
                     {selectedPatient ? (
@@ -750,8 +771,8 @@ function PatientManagement() {
 export function HospitalView() {
   return (
     <div className="space-y-4 sm:space-y-6">
-      <Tabs defaultValue="link-patient">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto p-1">
+      <Tabs defaultValue="monitoring">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 h-auto p-1">
           <TabsTrigger value="link-patient" className="text-xs sm:text-sm py-2">
             <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Link Patient</span>
@@ -767,6 +788,11 @@ export function HospitalView() {
             <span className="hidden sm:inline">Meal Tracking</span>
             <span className="sm:hidden">Meals</span>
           </TabsTrigger>
+          <TabsTrigger value="progress" className="text-xs sm:text-sm py-2">
+            <Activity className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Progress</span>
+            <span className="sm:hidden">Progress</span>
+          </TabsTrigger>
           <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2">
             <HeartPulse className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Update Vitals</span>
@@ -776,6 +802,11 @@ export function HospitalView() {
             <UtensilsCrossed className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">Mess Menu</span>
             <span className="sm:hidden">Menu</span>
+          </TabsTrigger>
+          <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2">
+            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Monitoring</span>
+            <span className="sm:hidden">Monitor</span>
           </TabsTrigger>
         </TabsList>
         <TabsContent value="link-patient" className="mt-4 sm:mt-6">
@@ -787,11 +818,31 @@ export function HospitalView() {
         <TabsContent value="meal-tracking" className="mt-4 sm:mt-6">
           <MealTrackingView />
         </TabsContent>
+        <TabsContent value="progress" className="mt-4 sm:mt-6">
+          <PatientProgress />
+        </TabsContent>
         <TabsContent value="vitals" className="mt-4 sm:mt-6">
           <VitalsForm showPatientSelection={false} />
         </TabsContent>
         <TabsContent value="mess-menu" className="mt-4 sm:mt-6">
           <MessMenuManager />
+        </TabsContent>
+        <TabsContent value="monitoring" className="mt-4 sm:mt-6">
+          <div className="space-y-6">
+            <SummaryWidgets />
+            <RealTimeStatusIndicators />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <PatientOverviewCards />
+              <div className="space-y-6">
+                <MealAdherenceStats />
+                <VitalTrends />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ConsultationSummaries />
+              <QuickActionButtons />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

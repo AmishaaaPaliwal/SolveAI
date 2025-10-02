@@ -35,7 +35,7 @@ export type Patient = {
   lastUpdated: Date;
 };
 
-export type Role = 'patient' | 'dietitian' | 'hospital';
+export type Role = 'patient' | 'dietitian' | 'hospital-admin';
 
 // Ayurvedic Properties
 export type Rasa = 'Sweet' | 'Sour' | 'Salty' | 'Bitter' | 'Pungent' | 'Astringent';
@@ -215,13 +215,148 @@ export type Vitals = {
 
 
 export type User = {
-  id: string;
+  uid: string;
   email: string;
-  role: 'patient' | 'dietitian' | 'hospital' | 'admin';
-  name: string;
-  phone?: string;
+  displayName: string;
+  role: 'patient' | 'dietitian' | 'hospital-admin';
   hospitalId?: string;
-  registrationDate: Date;
-  lastLogin?: Date;
-  isActive: boolean;
+  patientId?: string;
+  createdAt: Date;
+  lastLogin: Date;
 };
+
+export type Hospital = {
+  id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  adminId: string;
+  createdAt: Date;
+};
+
+// IFCT Food Database Types
+export interface IFCFood {
+  code: string;
+  name: string;
+  scie: string; // Scientific name
+  regn: number; // Region code
+  [key: string]: string | number; // All nutrient columns
+}
+
+export interface FoodSearchRequest {
+  query: string;
+  limit?: number;
+}
+
+export interface NutrientRangeRequest {
+  nutrient: string;
+  min: number;
+  max: number;
+  limit?: number;
+}
+
+// Notification Types
+export type NotificationType = 'meal_reminder' | 'water_intake' | 'diet_notes' | 'diet_plan_delivery' | 'diet_plan_activation' | 'general';
+
+export interface Notification {
+  id: string;
+  userId: string; // patient, dietitian, or hospital-admin uid
+  type: NotificationType;
+  title: string;
+  message: string;
+  data?: {
+    mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snacks';
+    waterTarget?: number;
+    dietPlanId?: string;
+    patientId?: string;
+    [key: string]: any;
+  };
+  scheduledFor?: Date;
+  sentAt?: Date;
+  readAt?: Date;
+  isRead: boolean;
+  priority: 'low' | 'medium' | 'high';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface NotificationSettings {
+  id: string;
+  userId: string;
+  mealReminders: boolean;
+  waterReminders: boolean;
+  dietNotes: boolean;
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  reminderTimes: {
+    breakfast: string; // HH:MM format
+    lunch: string;
+    dinner: string;
+    snacks: string[];
+  };
+  waterReminderInterval: number; // minutes
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// AYUSH Policy and Guidelines Types
+export type PolicyCategory = 'dietary_guidelines' | 'treatment_protocols' | 'seasonal_recommendations' | 'dosha_management' | 'food_combinations' | 'lifestyle_guidance' | 'preventive_care' | 'therapeutic_diets';
+
+export type PolicySource = 'ministry_of_ayush' | 'ccras' | 'nimbu' | 'classical_texts' | 'research_studies' | 'expert_consensus';
+
+export interface PolicyDocument {
+  id: string;
+  title: string;
+  category: PolicyCategory;
+  source: PolicySource;
+  referenceNumber?: string; // Official reference number/citation
+  summary: string;
+  fullContent: string;
+  keyPrinciples: string[];
+  applicableConditions?: string[]; // Health conditions this applies to
+  targetAudience?: ('dietitians' | 'doctors' | 'patients' | 'hospital_staff')[];
+  tags: string[]; // For searchability
+  doshaRelevance?: {
+    vata: boolean;
+    pitta: boolean;
+    kapha: boolean;
+  };
+  seasonalRelevance?: ('spring' | 'summer' | 'monsoon' | 'autumn' | 'winter')[];
+  effectiveDate: Date;
+  lastReviewed?: Date;
+  isActive: boolean;
+  createdBy: string; // Dietitian or admin who added it
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PolicySearchRequest {
+  query?: string;
+  category?: PolicyCategory;
+  source?: PolicySource;
+  tags?: string[];
+  doshaType?: 'vata' | 'pitta' | 'kapha';
+  season?: 'spring' | 'summer' | 'monsoon' | 'autumn' | 'winter';
+  conditions?: string[];
+  limit?: number;
+}
+
+export interface PolicyComplianceCheck {
+  policyId: string;
+  policyTitle: string;
+  complianceStatus: 'compliant' | 'partial' | 'non_compliant';
+  violations?: string[];
+  recommendations?: string[];
+  severity: 'low' | 'medium' | 'high';
+}
+
+export interface DietPlanCompliance {
+  dietPlanId: string;
+  patientId: string;
+  overallCompliance: 'compliant' | 'partial' | 'non_compliant';
+  policyChecks: PolicyComplianceCheck[];
+  generatedAt: Date;
+  reviewedBy?: string;
+  reviewNotes?: string;
+}

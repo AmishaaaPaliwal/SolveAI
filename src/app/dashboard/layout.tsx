@@ -1,3 +1,5 @@
+"use client";
+
 import {
   SidebarProvider,
   Sidebar,
@@ -15,12 +17,19 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Leaf, LogOut } from "lucide-react";
 import Link from "next/link";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
+import { NotificationsDropdown } from "@/components/dashboard/notifications";
+import { useAuth } from "@/lib/auth";
+import { useFCM } from "@/hooks/useFCM";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { userProfile, loading } = useAuth();
+  // Initialize FCM for push notifications
+  useFCM();
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full">
@@ -38,6 +47,7 @@ export default function DashboardLayout({
                   <span className="sm:hidden">AT</span>
                 </Link>
               </div>
+              <NotificationsDropdown />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="relative h-8 w-8 sm:h-9 sm:w-9 rounded-full">
@@ -50,10 +60,17 @@ export default function DashboardLayout({
                 <DropdownMenuContent className="w-48 sm:w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Guest User</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        guest@ayurtrack.com
+                      <p className="text-sm font-medium leading-none">
+                        {userProfile?.displayName || 'User'}
                       </p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {userProfile?.email || 'user@example.com'}
+                      </p>
+                      {userProfile?.role && (
+                        <p className="text-xs leading-none text-muted-foreground capitalize">
+                          {userProfile.role}
+                        </p>
+                      )}
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

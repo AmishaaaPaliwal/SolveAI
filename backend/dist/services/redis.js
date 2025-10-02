@@ -14,17 +14,26 @@ class RedisService {
             this._isConnected = false;
         });
         this.client.on('connect', () => {
-            console.log('✅ Redis connected successfully');
+            console.log('✅ Redis TCP connected');
+        });
+        this.client.on('ready', () => {
+            console.log('✅ Redis ready');
             this._isConnected = true;
         });
-        this.client.on('disconnect', () => {
+        this.client.on('end', () => {
             console.log('❌ Redis disconnected');
             this._isConnected = false;
         });
     }
     async connect() {
-        if (!this.isConnected) {
-            await this.client.connect();
+        try {
+            if (!this.isConnected) {
+                await this.client.connect();
+            }
+        }
+        catch (error) {
+            console.error('Redis connection failed, continuing without Redis:', error);
+            // Don't throw, continue without Redis
         }
     }
     async disconnect() {
@@ -34,6 +43,8 @@ class RedisService {
     }
     // Generic cache operations
     async set(key, value, ttlSeconds) {
+        if (!this.isConnected)
+            return;
         try {
             const serializedValue = JSON.stringify(value);
             if (ttlSeconds) {
@@ -49,6 +60,8 @@ class RedisService {
         }
     }
     async get(key) {
+        if (!this.isConnected)
+            return null;
         try {
             const value = await this.client.get(key);
             return value ? JSON.parse(value) : null;
@@ -59,6 +72,8 @@ class RedisService {
         }
     }
     async delete(key) {
+        if (!this.isConnected)
+            return false;
         try {
             const result = await this.client.del(key);
             return result > 0;
@@ -69,6 +84,8 @@ class RedisService {
         }
     }
     async exists(key) {
+        if (!this.isConnected)
+            return false;
         try {
             const result = await this.client.exists(key);
             return result > 0;
@@ -133,6 +150,8 @@ class RedisService {
     }
     // Rate limiting
     async incrementRateLimit(identifier, windowSeconds = 60) {
+        if (!this.isConnected)
+            return 1; // Allow if Redis not available
         const key = `rate_limit:${identifier}`;
         const count = await this.client.incr(key);
         if (count === 1) {
@@ -141,6 +160,8 @@ class RedisService {
         return count;
     }
     async getRateLimit(identifier) {
+        if (!this.isConnected)
+            return 0;
         const key = `rate_limit:${identifier}`;
         const count = await this.client.get(key);
         return count ? parseInt(count) : 0;

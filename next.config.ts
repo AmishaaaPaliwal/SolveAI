@@ -12,19 +12,19 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: 'placehold.co',
+        hostname: process.env.NEXT_PUBLIC_PLACEHOLD_CO_DOMAIN || 'placehold.co',
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'images.unsplash.com',
+        hostname: process.env.NEXT_PUBLIC_UNSPLASH_DOMAIN || 'images.unsplash.com',
         port: '',
         pathname: '/**',
       },
       {
         protocol: 'https',
-        hostname: 'picsum.photos',
+        hostname: process.env.NEXT_PUBLIC_PICSUM_DOMAIN || 'picsum.photos',
         port: '',
         pathname: '/**',
       },

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { redisService } from './services/redis';
+import { initializeScheduler } from './services/scheduler';
 
 // Load environment variables
 dotenv.config();
@@ -13,7 +14,12 @@ import dietPlanRoutes from './routes/dietPlans';
 import messMenuRoutes from './routes/messMenus';
 import vitalsRoutes from './routes/vitals';
 import mealTrackingRoutes from './routes/mealTracking';
+import consultationsRoutes from './routes/consultations';
+import patientFeedbackRoutes from './routes/patientFeedback';
 import aiRoutes from './routes/ai';
+import foodRoutes from './routes/foods';
+import notificationRoutes from './routes/notifications';
+import policiesRoutes from './routes/policies';
 
 // Initialize Express app
 const app = express();
@@ -22,7 +28,7 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:9002'],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -43,7 +49,12 @@ app.use('/api/diet-plans', dietPlanRoutes);
 app.use('/api/mess-menus', messMenuRoutes);
 app.use('/api/vitals', vitalsRoutes);
 app.use('/api/meal-tracking', mealTrackingRoutes);
+app.use('/api/consultations', consultationsRoutes);
+app.use('/api/patient-feedback', patientFeedbackRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/foods', foodRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/policies', policiesRoutes);
 
 // 404 handler - must be placed after all other routes
 app.use((req, res) => {
@@ -79,11 +90,13 @@ async function initializeServices() {
 // Start server
 async function startServer() {
   await initializeServices();
+  initializeScheduler();
 
   app.listen(PORT, () => {
     console.log(`🚀 AyurTrack Backend API running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`🤖 AI endpoints: http://localhost:${PORT}/api/ai`);
+    console.log(`🔔 Notifications: http://localhost:${PORT}/api/notifications`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   });
 }

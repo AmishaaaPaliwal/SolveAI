@@ -2,6 +2,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAnalytics, Analytics } from "firebase/analytics";
+import { getMessaging, Messaging } from "firebase/messaging";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -24,4 +25,10 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_FIREBASE_MEASUREMEN
   analytics = getAnalytics(app);
 }
 
-export { app, db, analytics };
+// Initialize Messaging (only in browser environment)
+let messaging: Messaging | null = null;
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  messaging = getMessaging(app);
+}
+
+export { app, db, analytics, messaging };
