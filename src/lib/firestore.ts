@@ -188,30 +188,17 @@ export const dietPlansService = {
 
   // Get all diet plans for a patient
   getByPatient: async (patientId: string) => {
-    try {
-      return await FirestoreService.getAll<DietPlan>('dietPlans', [
-        where('patientId', '==', patientId),
-        orderBy('createdAt', 'desc')
-      ]);
-    } catch (error: any) {
-      // If index is building, try a simpler query as fallback
-      if (error.message && error.message.includes('requires an index')) {
-        console.warn('Diet plans index is building, using fallback query');
+    // Use fallback query without orderBy to avoid requiring composite index
+    const allPlans = await FirestoreService.getAll<DietPlan>('dietPlans', [
+      where('patientId', '==', patientId)
+    ]);
 
-        // Fallback: Get all diet plans for the patient without ordering
-        const allPlans = await FirestoreService.getAll<DietPlan>('dietPlans', [
-          where('patientId', '==', patientId)
-        ]);
-
-        // Sort client-side (less efficient but works)
-        return allPlans.sort((a, b) => {
-          const dateA = a.createdAt instanceof Date ? a.createdAt : new Date((a.createdAt as any)?.seconds * 1000 || 0);
-          const dateB = b.createdAt instanceof Date ? b.createdAt : new Date((b.createdAt as any)?.seconds * 1000 || 0);
-          return dateB.getTime() - dateA.getTime(); // Descending order
-        });
-      }
-      throw error;
-    }
+    // Sort client-side (descending order by createdAt)
+    return allPlans.sort((a, b) => {
+      const dateA = a.createdAt instanceof Date ? a.createdAt : new Date((a.createdAt as any)?.seconds * 1000 || 0);
+      const dateB = b.createdAt instanceof Date ? b.createdAt : new Date((b.createdAt as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
   },
 
   // Create diet plan
@@ -230,18 +217,32 @@ export const consultationsService = {
   getAll: () => FirestoreService.getAll<Consultation>('consultations', [orderBy('date', 'desc')]),
 
   // Get consultations for a patient
-  getByPatient: (patientId: string) =>
-    FirestoreService.getAll<Consultation>('consultations', [
-      where('patientId', '==', patientId),
-      orderBy('date', 'desc')
-    ]),
+  getByPatient: async (patientId: string) => {
+    const allConsultations = await FirestoreService.getAll<Consultation>('consultations', [
+      where('patientId', '==', patientId)
+    ]);
+
+    // Sort client-side (descending order by date)
+    return allConsultations.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date((a.date as any)?.seconds * 1000 || 0);
+      const dateB = b.date instanceof Date ? b.date : new Date((b.date as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
 
   // Get consultations for a dietitian
-  getByDietitian: (dietitianId: string) =>
-    FirestoreService.getAll<Consultation>('consultations', [
-      where('dietitianId', '==', dietitianId),
-      orderBy('date', 'desc')
-    ]),
+  getByDietitian: async (dietitianId: string) => {
+    const allConsultations = await FirestoreService.getAll<Consultation>('consultations', [
+      where('dietitianId', '==', dietitianId)
+    ]);
+
+    // Sort client-side (descending order by date)
+    return allConsultations.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date((a.date as any)?.seconds * 1000 || 0);
+      const dateB = b.date instanceof Date ? b.date : new Date((b.date as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
 
   // Create consultation
   create: (data: Omit<Consultation, 'id'>) => FirestoreService.create<Consultation>('consultations', data),
@@ -253,58 +254,45 @@ export const consultationsService = {
 
 export const messMenusService = {
   // Get all mess menus for a hospital
-  getByHospital: (hospitalId: string) =>
-    FirestoreService.getAll<MessMenu>('messMenus', [
-      where('hospitalId', '==', hospitalId),
-      orderBy('date', 'desc')
-    ]),
+  getByHospital: async (hospitalId: string) => {
+    const allMenus = await FirestoreService.getAll<MessMenu>('messMenus', [
+      where('hospitalId', '==', hospitalId)
+    ]);
+
+    // Sort client-side (descending order by date)
+    return allMenus.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date((a.date as any)?.seconds * 1000 || 0);
+      const dateB = b.date instanceof Date ? b.date : new Date((b.date as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
 
   // Get today's mess menu for a hospital
   getTodayMenu: async (hospitalId: string) => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
+    // Get all active menus for the hospital and filter client-side to avoid index requirements
+    const allMenus = await FirestoreService.getAll<MessMenu>('messMenus', [
+      where('hospitalId', '==', hospitalId),
+      where('isActive', '==', true)
+    ]);
 
-      return await FirestoreService.getAll<MessMenu>('messMenus', [
-        where('hospitalId', '==', hospitalId),
-        where('date', '>=', today),
-        where('date', '<', tomorrow),
-        where('isActive', '==', true)
-      ]);
-    } catch (error: any) {
-      // If index is building, try a simpler query as fallback
-      if (error.message && error.message.includes('requires an index')) {
-        console.warn('Index is building, using fallback query for today\'s menu');
+    // Filter for today's date on the client side
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // Fallback: Get all active menus for the hospital and filter client-side
-        const allMenus = await FirestoreService.getAll<MessMenu>('messMenus', [
-          where('hospitalId', '==', hospitalId),
-          where('isActive', '==', true)
-        ]);
-
-        // Filter for today's date on the client side
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        return allMenus.filter(menu => {
-          let menuDate: Date;
-          if (menu.date instanceof Date) {
-            menuDate = menu.date;
-          } else if (menu.date && typeof menu.date === 'object' && 'seconds' in menu.date) {
-            // Firestore Timestamp
-            menuDate = new Date((menu.date as any).seconds * 1000);
-          } else {
-            return false; // Invalid date
-          }
-          return menuDate >= today && menuDate < tomorrow;
-        });
+    return allMenus.filter(menu => {
+      let menuDate: Date;
+      if (menu.date instanceof Date) {
+        menuDate = menu.date;
+      } else if (menu.date && typeof menu.date === 'object' && 'seconds' in menu.date) {
+        // Firestore Timestamp
+        menuDate = new Date((menu.date as any).seconds * 1000);
+      } else {
+        return false; // Invalid date
       }
-      throw error;
-    }
+      return menuDate >= today && menuDate < tomorrow;
+    });
   },
 
   // Create mess menu
@@ -344,30 +332,17 @@ export const messMenusService = {
 export const vitalsService = {
   // Get all vitals for a patient
   getByPatient: async (patientId: string) => {
-    try {
-      return await FirestoreService.getAll<Vitals>('vitals', [
-        where('patientId', '==', patientId),
-        orderBy('date', 'desc')
-      ]);
-    } catch (error: any) {
-      // If index is building, try a simpler query as fallback
-      if (error.message && error.message.includes('requires an index')) {
-        console.warn('Vitals index is building, using fallback query');
+    // Use fallback query without orderBy to avoid requiring composite index
+    const allVitals = await FirestoreService.getAll<Vitals>('vitals', [
+      where('patientId', '==', patientId)
+    ]);
 
-        // Fallback: Get all vitals for the patient without ordering
-        const allVitals = await FirestoreService.getAll<Vitals>('vitals', [
-          where('patientId', '==', patientId)
-        ]);
-
-        // Sort client-side (less efficient but works)
-        return allVitals.sort((a, b) => {
-          const dateA = a.date instanceof Date ? a.date : new Date((a.date as any)?.seconds * 1000 || 0);
-          const dateB = b.date instanceof Date ? b.date : new Date((b.date as any)?.seconds * 1000 || 0);
-          return dateB.getTime() - dateA.getTime(); // Descending order
-        });
-      }
-      throw error;
-    }
+    // Sort client-side (descending order by date)
+    return allVitals.sort((a, b) => {
+      const dateA = a.date instanceof Date ? a.date : new Date((a.date as any)?.seconds * 1000 || 0);
+      const dateB = b.date instanceof Date ? b.date : new Date((b.date as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
   },
 
   // Get latest vitals for a patient
@@ -398,13 +373,27 @@ export const mealTrackingService = {
     ]),
 
   // Get meal tracking for a specific date range
-  getByDateRange: (patientId: string, startDate: Date, endDate: Date) =>
-    FirestoreService.getAll<MealTracking>('mealTracking', [
-      where('patientId', '==', patientId),
-      where('scheduledDate', '>=', startDate),
-      where('scheduledDate', '<=', endDate),
-      orderBy('scheduledDate', 'desc')
-    ]),
+  getByDateRange: async (patientId: string, startDate: Date, endDate: Date) => {
+    // Fetch all meal tracking for the patient without date filter to avoid index requirement
+    const allTracking = await FirestoreService.getAll<MealTracking>('mealTracking', [
+      where('patientId', '==', patientId)
+    ]);
+
+    // Filter by date range client-side
+    const filtered = allTracking.filter(tracking => {
+      const scheduledDate = tracking.scheduledDate instanceof Date
+        ? tracking.scheduledDate
+        : new Date((tracking.scheduledDate as any)?.seconds * 1000 || 0);
+      return scheduledDate >= startDate && scheduledDate <= endDate;
+    });
+
+    // Sort by scheduledDate descending
+    return filtered.sort((a, b) => {
+      const dateA = a.scheduledDate instanceof Date ? a.scheduledDate : new Date((a.scheduledDate as any)?.seconds * 1000 || 0);
+      const dateB = b.scheduledDate instanceof Date ? b.scheduledDate : new Date((b.scheduledDate as any)?.seconds * 1000 || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+  },
 
   // Get today's meal tracking for a patient
   getTodayMeals: (patientId: string) => {
