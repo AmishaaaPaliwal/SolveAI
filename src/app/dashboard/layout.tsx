@@ -43,8 +43,8 @@ export default function DashboardLayout({
               <div className="ml-auto flex-1 sm:flex-initial">
                 <Link href="/" className="flex items-center gap-2 font-headline font-semibold text-sm sm:text-base">
                   <Leaf className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-                  <span className="hidden sm:inline">AyurTrack</span>
-                  <span className="sm:hidden">AT</span>
+                  <span className="hidden sm:inline">SolveAI</span>
+                  <span className="sm:hidden">SA</span>
                 </Link>
               </div>
               <NotificationsDropdown />

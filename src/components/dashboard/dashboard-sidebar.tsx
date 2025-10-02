@@ -48,7 +48,7 @@ const hospitalNav = [
 const navItems: Record<Role, { name: string; href: string; icon: React.ReactNode }[]> = {
   patient: patientNav,
   dietitian: dietitianNav,
-  hospital: hospitalNav,
+  'hospital-admin': hospitalNav,
 };
 
 export function DashboardSidebar() {
@@ -64,7 +64,8 @@ export function DashboardSidebar() {
           <h2 className="text-lg font-semibold text-sidebar-foreground">
             {role === 'patient' ? 'Patient Portal' :
              role === 'dietitian' ? 'Dietitian Portal' :
-             'Hospital Portal'}
+             role === 'hospital-admin' ? 'Hospital Portal' :
+             'Portal'}
           </h2>
         </div>
       </SidebarHeader>

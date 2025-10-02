@@ -26,7 +26,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl font-headline">
             <Leaf className="text-primary h-6 w-6" />
-            Welcome to AyurTrack
+            Welcome to SolveAI
           </DialogTitle>
           <DialogDescription>
             Please select your role to continue.
@@ -55,7 +55,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
             variant="outline"
             size="lg"
             className="justify-start text-base py-6"
-            onClick={() => handleLogin('hospital')}
+            onClick={() => handleLogin('hospital-admin')}
           >
             <Building className="mr-4 h-5 w-5" />
             Login as Hospital Staff

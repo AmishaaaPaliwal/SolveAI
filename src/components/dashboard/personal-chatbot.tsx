@@ -21,7 +21,7 @@ export function PersonalChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       sender: 'bot',
-      text: "Hello! I am your personal AyurTrack assistant. Ask me any questions about your diet plan.",
+      text: "Hello! I am your personal SolveAI assistant. Ask me any questions about your diet plan.",
     }
   ]);
   const [input, setInput] = useState('');

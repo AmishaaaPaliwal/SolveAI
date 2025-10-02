@@ -1,6 +1,6 @@
-# AyurTrack Backend API
+# SolveAI Backend API
 
-Backend API server for the AyurTrack Ayurvedic Diet Management platform.
+Backend API server for the SolveAI Ayurvedic Diet Management platform.
 
 ## Tech Stack
 

@@ -1,7 +1,7 @@
 {
   "name": "ayurtrack-backend",
   "version": "1.0.0",
-  "description": "Backend API for AyurTrack - Ayurvedic Diet Management Platform",
+  "description": "Backend API for SolveAI - Ayurvedic Diet Management Platform",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -17,7 +17,7 @@
     "healthcare",
     "api"
   ],
-  "author": "AyurTrack Team",
+  "author": "SolveAI Team",
   "license": "ISC",
   "dependencies": {
     "@google-cloud/speech": "^7.2.0",

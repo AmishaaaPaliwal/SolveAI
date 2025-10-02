@@ -22,13 +22,13 @@ export function DashboardClient({ role }: DashboardClientProps) {
             <Leaf className="text-primary"/>
             {roleName} Dashboard
           </CardTitle>
-          <CardDescription>Welcome to your AyurTrack portal. Manage your health journey here.</CardDescription>
+          <CardDescription>Welcome to your SolveAI portal. Manage your health journey here.</CardDescription>
         </CardHeader>
       </Card>
 
       {role === 'patient' && <PatientView />}
       {role === 'dietitian' && <DietitianView />}
-      {role === 'hospital' && <HospitalView />}
+      {role === 'hospital-admin' && <HospitalView />}
     </div>
   );
 }

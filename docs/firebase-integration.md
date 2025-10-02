@@ -1,6 +1,6 @@
 # Firebase Firestore Integration Guide
 
-This guide explains how to use Firebase Firestore as the backend for your AyurTrack application.
+This guide explains how to use Firebase Firestore as the backend for your SolveAI application.
 
 ## Setup
 
@@ -319,4 +319,4 @@ function PatientList() {
 }
 ```
 
-This integration provides a robust, scalable backend solution for your AyurTrack application.
+This integration provides a robust, scalable backend solution for your SolveAI application.

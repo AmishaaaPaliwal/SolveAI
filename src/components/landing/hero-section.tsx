@@ -21,7 +21,7 @@ export function HeroSection() {
                   Harmonize Your Health with AI-Powered Ayurvedic Nutrition
                 </h1>
                 <p className="max-w-[600px] text-foreground/80 md:text-xl text-balance">
-                  AyurTrack combines ancient wisdom with modern technology to create personalized diet plans that align with your unique constitution and health goals.
+                  SolveAI combines ancient wisdom with modern technology to create personalized diet plans that align with your unique constitution and health goals.
                 </p>
               </div>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">

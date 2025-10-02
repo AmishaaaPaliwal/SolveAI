@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'AyurTrack | Personalized Ayurvedic Diet Management',
+  title: 'SolveAI | Personalized Ayurvedic Diet Management',
   description: 'AI-powered diet chart generation and health tracking based on Ayurvedic principles.',
 };
 

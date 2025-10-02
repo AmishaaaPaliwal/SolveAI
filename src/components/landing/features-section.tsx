@@ -32,7 +32,7 @@ export function FeaturesSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter font-headline sm:text-5xl">Features for a Balanced Life</h2>
             <p className="max-w-[900px] text-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              AyurTrack provides a complete suite of tools to help you, your dietitian, and hospital staff manage your health journey seamlessly.
+              SolveAI provides a complete suite of tools to help you, your dietitian, and hospital staff manage your health journey seamlessly.
             </p>
           </div>
         </div>

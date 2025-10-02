@@ -51,7 +51,7 @@ export function HowItWorksSection() {
           <div className="space-y-2">
             <h2 className="text-3xl font-bold tracking-tighter font-headline sm:text-5xl">A Simple Path to Wellness</h2>
             <p className="max-w-[900px] text-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-              AyurTrack simplifies health management for everyone involved. Here's how each role benefits from our streamlined process.
+              SolveAI simplifies health management for everyone involved. Here's how each role benefits from our streamlined process.
             </p>
           </div>
         </div>

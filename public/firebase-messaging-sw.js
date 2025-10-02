@@ -20,7 +20,7 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('Received background message:', payload);
 
-  const notificationTitle = payload.notification?.title || 'AyurTrack Notification';
+  const notificationTitle = payload.notification?.title || 'SolveAI Notification';
   const notificationOptions = {
     body: payload.notification?.body || 'You have a new notification',
     icon: '/favicon.ico',

@@ -39,7 +39,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
-    service: 'AyurTrack Backend API'
+    service: 'SolveAI Backend API'
   });
 });
 
@@ -93,7 +93,7 @@ async function startServer() {
   initializeScheduler();
 
   app.listen(PORT, () => {
-    console.log(`🚀 AyurTrack Backend API running on port ${PORT}`);
+    console.log(`🚀 SolveAI Backend API running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`🤖 AI endpoints: http://localhost:${PORT}/api/ai`);
     console.log(`🔔 Notifications: http://localhost:${PORT}/api/notifications`);

@@ -1,4 +1,4 @@
-# **App Name**: AyurTrack
+# **App Name**: SolveAI
 
 ## Core Features:
 

@@ -198,7 +198,7 @@ export default function RegisterPage() {
                 User Registration
               </CardTitle>
               <CardDescription>
-                Create your AyurTrack account. Select your role and provide the required information.
+                Create your SolveAI account. Select your role and provide the required information.
               </CardDescription>
             </CardHeader>
             <CardContent>
