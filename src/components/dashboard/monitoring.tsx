@@ -171,9 +171,20 @@ export function MealAdherenceStats() {
   }, []);
 
   const chartData = [
-    { name: 'Served', value: stats.mealsServed, color: '#22c55e' },
-    { name: 'Skipped', value: stats.mealsSkipped, color: '#ef4444' }
+    { name: 'Served', value: stats.mealsServed, fill: '#22c55e' },
+    { name: 'Skipped', value: stats.mealsSkipped, fill: '#ef4444' }
   ];
+
+  const chartConfig = {
+    served: {
+      label: "Served",
+      color: "#22c55e",
+    },
+    skipped: {
+      label: "Skipped",
+      color: "#ef4444",
+    },
+  };
 
   if (isLoading) {
     return (
@@ -214,25 +225,23 @@ export function MealAdherenceStats() {
           </div>
         </div>
 
-        <div className="h-32">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={50}
-                dataKey="value"
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <ChartTooltip content={<ChartTooltipContent />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={chartConfig} className="h-32">
+          <PieChart>
+            <Pie
+              data={chartData}
+              cx="50%"
+              cy="50%"
+              innerRadius={30}
+              outerRadius={50}
+              dataKey="value"
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.fill} />
+              ))}
+            </Pie>
+            <ChartTooltip content={<ChartTooltipContent />} />
+          </PieChart>
+        </ChartContainer>
 
         <div className="flex justify-center gap-4 text-xs">
           <div className="flex items-center gap-1">
@@ -330,6 +339,17 @@ export function VitalTrends() {
     );
   }
 
+  const chartConfig = {
+    avgBP: {
+      label: "Avg Blood Pressure",
+      color: "#8884d8",
+    },
+    avgWeight: {
+      label: "Avg Weight (kg)",
+      color: "#82ca9d",
+    },
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -339,32 +359,30 @@ export function VitalTrends() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={trends}>
-              <XAxis dataKey="date" />
-              <YAxis yAxisId="bp" orientation="left" />
-              <YAxis yAxisId="weight" orientation="right" />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Line
-                yAxisId="bp"
-                type="monotone"
-                dataKey="avgBP"
-                stroke="#8884d8"
-                strokeWidth={2}
-                name="Avg Blood Pressure"
-              />
-              <Line
-                yAxisId="weight"
-                type="monotone"
-                dataKey="avgWeight"
-                stroke="#82ca9d"
-                strokeWidth={2}
-                name="Avg Weight (kg)"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <ChartContainer config={chartConfig} className="h-48">
+          <LineChart data={trends}>
+            <XAxis dataKey="date" />
+            <YAxis yAxisId="bp" orientation="left" />
+            <YAxis yAxisId="weight" orientation="right" />
+            <ChartTooltip content={<ChartTooltipContent />} />
+            <Line
+              yAxisId="bp"
+              type="monotone"
+              dataKey="avgBP"
+              stroke="#8884d8"
+              strokeWidth={2}
+              name="Avg Blood Pressure"
+            />
+            <Line
+              yAxisId="weight"
+              type="monotone"
+              dataKey="avgWeight"
+              stroke="#82ca9d"
+              strokeWidth={2}
+              name="Avg Weight (kg)"
+            />
+          </LineChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
