@@ -39,27 +39,52 @@ const admin = __importStar(require("firebase-admin"));
 const firestore_1 = require("firebase-admin/firestore");
 // Initialize Firebase Admin
 if (!admin.apps.length) {
-    // For development, use default credentials if available
-    // For production, use service account key from environment
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    // Check if individual Firebase credentials are provided
+    if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
         try {
-            // Parse the service account JSON
+            // Use individual environment variables
+            const serviceAccount = {
+                type: process.env.FIREBASE_TYPE || 'service_account',
+                project_id: process.env.FIREBASE_PROJECT_ID,
+                private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+                private_key: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                client_email: process.env.FIREBASE_CLIENT_EMAIL,
+                client_id: process.env.FIREBASE_CLIENT_ID,
+                auth_uri: process.env.FIREBASE_AUTH_URI,
+                token_uri: process.env.FIREBASE_TOKEN_URI,
+                auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_CERT_URL,
+                client_x509_cert_url: process.env.FIREBASE_CLIENT_CERT_URL,
+                universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
+            };
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+                projectId: process.env.FIREBASE_PROJECT_ID
+            });
+            console.log('✅ Firebase Admin initialized with individual credentials');
+        }
+        catch (error) {
+            console.error('❌ Failed to initialize Firebase with individual credentials:', error);
+            throw error;
+        }
+    }
+    else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+        try {
+            // Fallback: Parse the service account JSON (legacy support)
             const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount),
                 projectId: process.env.FIREBASE_PROJECT_ID
             });
-            console.log('✅ Firebase Admin initialized with service account');
+            console.log('✅ Firebase Admin initialized with service account JSON');
         }
         catch (error) {
             console.error('❌ Failed to parse Firebase service account JSON:', error);
-            console.error('Please check your FIREBASE_SERVICE_ACCOUNT_KEY in .env file');
             throw error;
         }
     }
     else {
         // Use default credentials (for development with Firebase CLI)
-        console.log('⚠️ No service account key found, using default credentials');
+        console.log('⚠️ No Firebase credentials found, using default credentials');
         admin.initializeApp({
             projectId: process.env.FIREBASE_PROJECT_ID
         });
