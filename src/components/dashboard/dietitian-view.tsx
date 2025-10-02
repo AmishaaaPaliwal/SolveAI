@@ -547,54 +547,56 @@ function PatientManagement() {
                 <CardTitle className="font-headline flex items-center gap-2"><User /> Patient Management</CardTitle>
                 <CardDescription>View and manage your assigned patients.</CardDescription>
             </CardHeader>
-            <CardContent>
-                 <Table>
-                    <TableHeader>
-                        <TableRow>
-                        <TableHead>Patient Name</TableHead>
-                        <TableHead>Age</TableHead>
-                        <TableHead>Gender</TableHead>
-                        <TableHead>Unique Code</TableHead>
-                        <TableHead>Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array.from({ length: 4 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell><Skeleton className="h-8 w-24" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : patients.length > 0 ? (
-                            patients.map((patient) => (
-                            <TableRow key={patient.id}>
-                                <TableCell className="font-medium">{patient.name}</TableCell>
-                                <TableCell>{patient.age}</TableCell>
-                                <TableCell>{patient.gender}</TableCell>
-                                <TableCell className="font-mono">{patient.code}</TableCell>
-                                <TableCell>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleViewPatientDetails(patient)}
-                                    >
-                                        View Details
-                                    </Button>
-                                </TableCell>
-                            </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={5} className="text-center">No patients found.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </CardContent>
+            <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <Table>
+                       <TableHeader>
+                           <TableRow>
+                           <TableHead className="text-left">Patient Name</TableHead>
+                           <TableHead className="text-center w-20">Age</TableHead>
+                           <TableHead className="text-center w-24">Gender</TableHead>
+                           <TableHead className="text-center w-28">Unique Code</TableHead>
+                           <TableHead className="text-center w-32">Actions</TableHead>
+                           </TableRow>
+                       </TableHeader>
+                       <TableBody>
+                           {isLoading ? (
+                               Array.from({ length: 4 }).map((_, i) => (
+                                   <TableRow key={i}>
+                                       <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                       <TableCell className="text-center"><Skeleton className="h-4 w-8 mx-auto" /></TableCell>
+                                       <TableCell className="text-center"><Skeleton className="h-4 w-12 mx-auto" /></TableCell>
+                                       <TableCell className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></TableCell>
+                                       <TableCell className="text-center"><Skeleton className="h-8 w-24 mx-auto" /></TableCell>
+                                   </TableRow>
+                               ))
+                           ) : patients.length > 0 ? (
+                               patients.map((patient) => (
+                               <TableRow key={patient.id}>
+                                   <TableCell className="font-medium">{patient.name}</TableCell>
+                                   <TableCell className="text-center">{patient.age}</TableCell>
+                                   <TableCell className="text-center">{patient.gender}</TableCell>
+                                   <TableCell className="font-mono text-center">{patient.code}</TableCell>
+                                   <TableCell className="text-center">
+                                       <Button
+                                           variant="outline"
+                                           size="sm"
+                                           onClick={() => handleViewPatientDetails(patient)}
+                                       >
+                                           View Details
+                                       </Button>
+                                   </TableCell>
+                               </TableRow>
+                               ))
+                           ) : (
+                               <TableRow>
+                                   <TableCell colSpan={5} className="text-center py-8">No patients found.</TableCell>
+                               </TableRow>
+                           )}
+                       </TableBody>
+                   </Table>
+                  </div>
+             </CardContent>
             </Card>
 
             {/* Patient Details Modal */}
@@ -1344,53 +1346,55 @@ export function DietitianView() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <Tabs defaultValue="monitoring">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-9 h-auto p-1">
-          <TabsTrigger value="consultation" className="text-xs sm:text-sm py-2">
-            <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">New Consultation</span>
-            <span className="sm:hidden">Consult</span>
-          </TabsTrigger>
-          <TabsTrigger value="patients" className="text-xs sm:text-sm py-2">
-            <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">My Patients</span>
-            <span className="sm:hidden">Patients</span>
-          </TabsTrigger>
-          <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2">
-            <Stethoscope className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Update Vitals</span>
-            <span className="sm:hidden">Vitals</span>
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="text-xs sm:text-sm py-2">
-            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Progress</span>
-            <span className="sm:hidden">Progress</span>
-          </TabsTrigger>
-          <TabsTrigger value="consultations" className="text-xs sm:text-sm py-2">
-            <Calendar className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Consultations</span>
-            <span className="sm:hidden">History</span>
-          </TabsTrigger>
-          <TabsTrigger value="generate-plan" className="text-xs sm:text-sm py-2">
-            <Bot className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Generate Plans</span>
-            <span className="sm:hidden">AI Plans</span>
-          </TabsTrigger>
-          <TabsTrigger value="policies" className="text-xs sm:text-sm py-2">
-            <BookOpen className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">AYUSH Policies</span>
-            <span className="sm:hidden">Policies</span>
-          </TabsTrigger>
-          <TabsTrigger value="plans" className="text-xs sm:text-sm py-2">
-            <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Diet Plans</span>
-            <span className="sm:hidden">Plans</span>
-          </TabsTrigger>
-          <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2">
-            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Monitoring</span>
-            <span className="sm:hidden">Monitor</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex h-auto p-1 min-w-max">
+            <TabsTrigger value="consultation" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <Plus className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">New Consultation</span>
+              <span className="sm:hidden">Consult</span>
+            </TabsTrigger>
+            <TabsTrigger value="patients" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">My Patients</span>
+              <span className="sm:hidden">Patients</span>
+            </TabsTrigger>
+            <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <Stethoscope className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Update Vitals</span>
+              <span className="sm:hidden">Vitals</span>
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Progress</span>
+              <span className="sm:hidden">Progress</span>
+            </TabsTrigger>
+            <TabsTrigger value="consultations" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <Calendar className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Consultations</span>
+              <span className="sm:hidden">History</span>
+            </TabsTrigger>
+            <TabsTrigger value="generate-plan" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <Bot className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Generate Plans</span>
+              <span className="sm:hidden">AI Plans</span>
+            </TabsTrigger>
+            <TabsTrigger value="policies" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <BookOpen className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">AYUSH Policies</span>
+              <span className="sm:hidden">Policies</span>
+            </TabsTrigger>
+            <TabsTrigger value="plans" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <FileText className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Diet Plans</span>
+              <span className="sm:hidden">Plans</span>
+            </TabsTrigger>
+            <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Monitoring</span>
+              <span className="sm:hidden">Monitor</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="consultation" className="mt-4 sm:mt-6">
           <PatientConsultationForm />
         </TabsContent>
