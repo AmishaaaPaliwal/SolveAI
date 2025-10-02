@@ -664,48 +664,52 @@ export function SummaryWidgets() {
 }
 
 // Quick Action Buttons Component
-export function QuickActionButtons() {
+interface QuickActionButtonsProps {
+  onAction?: (action: string) => void;
+}
+
+export function QuickActionButtons({ onAction }: QuickActionButtonsProps) {
   const actions = [
     {
       title: "New Patient",
       description: "Register a new patient",
       icon: User,
-      action: () => console.log("New patient"),
+      action: () => onAction?.("new-patient"),
       variant: "default" as const
     },
     {
       title: "Schedule Consultation",
       description: "Book a consultation",
       icon: Calendar,
-      action: () => console.log("Schedule consultation"),
+      action: () => onAction?.("schedule-consultation"),
       variant: "outline" as const
     },
     {
       title: "Update Vitals",
       description: "Record patient vitals",
       icon: Heart,
-      action: () => console.log("Update vitals"),
+      action: () => onAction?.("update-vitals"),
       variant: "outline" as const
     },
     {
       title: "Generate Diet Plan",
       description: "Create AI diet plan",
       icon: Zap,
-      action: () => console.log("Generate diet plan"),
+      action: () => onAction?.("generate-diet-plan"),
       variant: "outline" as const
     },
     {
       title: "View Reports",
       description: "Generate reports",
       icon: BarChart3,
-      action: () => console.log("View reports"),
+      action: () => onAction?.("view-reports"),
       variant: "outline" as const
     },
     {
       title: "Emergency Alert",
       description: "Send emergency notification",
       icon: AlertTriangle,
-      action: () => console.log("Emergency alert"),
+      action: () => onAction?.("emergency-alert"),
       variant: "destructive" as const
     }
   ];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { patientsService, vitalsService, messMenusService, dietPlansService, consultationsService } from "@/lib/firestore";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1343,9 +1344,39 @@ function ConsultationsManagement() {
 }
 
 export function DietitianView() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("monitoring");
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case "new-patient":
+        router.push("/register");
+        break;
+      case "schedule-consultation":
+        setActiveTab("consultation");
+        break;
+      case "update-vitals":
+        setActiveTab("vitals");
+        break;
+      case "generate-diet-plan":
+        setActiveTab("generate-plan");
+        break;
+      case "view-reports":
+        // For now, just show a toast or navigate to monitoring
+        setActiveTab("monitoring");
+        break;
+      case "emergency-alert":
+        // For now, just log
+        console.log("Emergency alert triggered");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      <Tabs defaultValue="monitoring">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="w-full overflow-x-auto">
           <TabsList className="inline-flex h-auto p-1 min-w-max">
             <TabsTrigger value="consultation" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
@@ -1435,7 +1466,7 @@ export function DietitianView() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ConsultationSummaries />
-              <QuickActionButtons />
+              <QuickActionButtons onAction={handleQuickAction} />
             </div>
           </div>
         </TabsContent>

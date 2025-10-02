@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -769,46 +770,77 @@ function PatientManagement() {
 
 
 export function HospitalView() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("monitoring");
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case "new-patient":
+        router.push("/register");
+        break;
+      case "schedule-consultation":
+        setActiveTab("link-patient");
+        break;
+      case "update-vitals":
+        setActiveTab("vitals");
+        break;
+      case "generate-diet-plan":
+        setActiveTab("patients");
+        break;
+      case "view-reports":
+        setActiveTab("monitoring");
+        break;
+      case "emergency-alert":
+        // For now, just log
+        console.log("Emergency alert triggered");
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      <Tabs defaultValue="monitoring">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-7 h-auto p-1">
-          <TabsTrigger value="link-patient" className="text-xs sm:text-sm py-2">
-            <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Link Patient</span>
-            <span className="sm:hidden">Link</span>
-          </TabsTrigger>
-          <TabsTrigger value="patients" className="text-xs sm:text-sm py-2">
-            <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Patient Management</span>
-            <span className="sm:hidden">Patients</span>
-          </TabsTrigger>
-          <TabsTrigger value="meal-tracking" className="text-xs sm:text-sm py-2">
-            <CheckSquare className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Meal Tracking</span>
-            <span className="sm:hidden">Meals</span>
-          </TabsTrigger>
-          <TabsTrigger value="progress" className="text-xs sm:text-sm py-2">
-            <Activity className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Progress</span>
-            <span className="sm:hidden">Progress</span>
-          </TabsTrigger>
-          <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2">
-            <HeartPulse className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Update Vitals</span>
-            <span className="sm:hidden">Vitals</span>
-          </TabsTrigger>
-          <TabsTrigger value="mess-menu" className="text-xs sm:text-sm py-2">
-            <UtensilsCrossed className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Mess Menu</span>
-            <span className="sm:hidden">Menu</span>
-          </TabsTrigger>
-          <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2">
-            <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Monitoring</span>
-            <span className="sm:hidden">Monitor</span>
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="w-full overflow-x-auto">
+          <TabsList className="inline-flex h-auto p-1 min-w-max">
+            <TabsTrigger value="link-patient" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Link Patient</span>
+              <span className="sm:hidden">Link</span>
+            </TabsTrigger>
+            <TabsTrigger value="patients" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <User className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Patient Management</span>
+              <span className="sm:hidden">Patients</span>
+            </TabsTrigger>
+            <TabsTrigger value="meal-tracking" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <CheckSquare className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Meal Tracking</span>
+              <span className="sm:hidden">Meals</span>
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <Activity className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Progress</span>
+              <span className="sm:hidden">Progress</span>
+            </TabsTrigger>
+            <TabsTrigger value="vitals" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <HeartPulse className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Update Vitals</span>
+              <span className="sm:hidden">Vitals</span>
+            </TabsTrigger>
+            <TabsTrigger value="mess-menu" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <UtensilsCrossed className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Mess Menu</span>
+              <span className="sm:hidden">Menu</span>
+            </TabsTrigger>
+            <TabsTrigger value="monitoring" className="text-xs sm:text-sm py-2 px-2 sm:px-3">
+              <BarChart3 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Monitoring</span>
+              <span className="sm:hidden">Monitor</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="link-patient" className="mt-4 sm:mt-6">
           <LinkPatientForm />
         </TabsContent>
@@ -840,7 +872,7 @@ export function HospitalView() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <ConsultationSummaries />
-              <QuickActionButtons />
+              <QuickActionButtons onAction={handleQuickAction} />
             </div>
           </div>
         </TabsContent>
