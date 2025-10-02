@@ -73,7 +73,7 @@ export function PatientView() {
               </div>
               <div>
                 <p className="font-medium">Hospital Status</p>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {patient ? (
                     <Badge variant="secondary" className="text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
@@ -85,7 +85,7 @@ export function PatientView() {
                       Not Linked
                     </Badge>
                   )}
-                </p>
+                </span>
               </div>
             </div>
 
@@ -95,7 +95,7 @@ export function PatientView() {
               </div>
               <div>
                 <p className="font-medium">Diet Plan</p>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {patient ? (
                     <Badge variant="secondary" className="text-xs">
                       <CheckCircle className="h-3 w-3 mr-1" />
@@ -107,7 +107,7 @@ export function PatientView() {
                       Pending
                     </Badge>
                   )}
-                </p>
+                </span>
               </div>
             </div>
 
@@ -117,11 +117,11 @@ export function PatientView() {
               </div>
               <div>
                 <p className="font-medium">Progress</p>
-                <p className="text-sm text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   <Badge variant="secondary" className="text-xs">
                     Track Now
                   </Badge>
-                </p>
+                </span>
               </div>
             </div>
           </div>
