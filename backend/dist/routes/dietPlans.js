@@ -6,19 +6,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dietPlans_1 = require("../services/dietPlans");
+const notifications_1 = require("../services/notifications");
 const redis_1 = require("../services/redis");
+const firestore_1 = require("../services/firestore");
 const router = express_1.default.Router();
 // GET /api/dietPlans - Get all diet plans
 router.get('/', async (req, res) => {
     try {
         // Check cache first
         const cacheKey = 'dietPlans:all';
-        let dietPlans = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let dietPlans = await redis_1.redisService.get(cacheKey);
         if (!dietPlans) {
             // Fetch from Firestore
             dietPlans = await dietPlans_1.dietPlansService.getAll();
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, dietPlans);
+            await redis_1.redisService.setWithTTL(cacheKey, dietPlans, 1800);
         }
         res.json({
             success: true,
@@ -40,13 +42,13 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         // Check cache first
-        let dietPlan = await redis_1.redisService.getCachedPatientData(id);
+        let dietPlan = await redis_1.redisService.get(id);
         if (!dietPlan) {
             // Fetch from Firestore
             dietPlan = await dietPlans_1.dietPlansService.getById(id);
             if (dietPlan) {
                 // Cache for 1 hour
-                await redis_1.redisService.cachePatientData(id, dietPlan);
+                await redis_1.redisService.setWithTTL(id, dietPlan, 3600);
             }
         }
         if (!dietPlan) {
@@ -76,12 +78,12 @@ router.get('/patient/:patientId', async (req, res) => {
         const { patientId } = req.params;
         // Check cache first
         const cacheKey = `dietPlans:patient:${patientId}`;
-        let dietPlans = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let dietPlans = await redis_1.redisService.get(cacheKey);
         if (!dietPlans) {
             // Fetch from Firestore
             dietPlans = await dietPlans_1.dietPlansService.getByPatient(patientId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, dietPlans);
+            await redis_1.redisService.setWithTTL(cacheKey, dietPlans, 1800);
         }
         res.json({
             success: true,
@@ -104,12 +106,12 @@ router.get('/dietitian/:dietitianId', async (req, res) => {
         const { dietitianId } = req.params;
         // Check cache first
         const cacheKey = `dietPlans:dietitian:${dietitianId}`;
-        let dietPlans = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let dietPlans = await redis_1.redisService.get(cacheKey);
         if (!dietPlans) {
             // Fetch from Firestore
             dietPlans = await dietPlans_1.dietPlansService.getByDietitian(dietitianId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, dietPlans);
+            await redis_1.redisService.setWithTTL(cacheKey, dietPlans, 1800);
         }
         res.json({
             success: true,
@@ -146,6 +148,20 @@ router.post('/', async (req, res) => {
         if (!planData.updatedAt)
             planData.updatedAt = new Date();
         const newPlan = await dietPlans_1.dietPlansService.create(planData);
+        // Send delivery notification to patient
+        try {
+            // Get patient details for notification
+            const patient = await firestore_1.patientsService.getById(planData.patientId);
+            if (patient) {
+                const notificationData = notifications_1.notificationHelpers.createDietPlanDelivery(planData.patientId, // Assuming patientId is the user ID
+                newPlan.id, planData.title);
+                await notifications_1.notificationsService.create(notificationData);
+            }
+        }
+        catch (error) {
+            console.error('Error creating diet plan delivery notification:', error);
+            // Don't fail the request if notification fails
+        }
         // Invalidate cache
         await redis_1.redisService.delete('dietPlans:all');
         res.status(201).json({
@@ -168,9 +184,32 @@ router.put('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         const updateData = req.body;
+        // Check if we're activating the diet plan
+        let wasActivated = false;
+        if (updateData.isActive === true) {
+            const existingPlan = await dietPlans_1.dietPlansService.getById(id);
+            if (existingPlan && !existingPlan.isActive) {
+                wasActivated = true;
+            }
+        }
         // Update timestamp
         updateData.updatedAt = new Date();
         await dietPlans_1.dietPlansService.update(id, updateData);
+        // Send activation notification if plan was just activated
+        if (wasActivated) {
+            try {
+                const updatedPlan = await dietPlans_1.dietPlansService.getById(id);
+                if (updatedPlan) {
+                    const notificationData = notifications_1.notificationHelpers.createDietPlanActivation(updatedPlan.patientId, // Assuming patientId is the user ID
+                    updatedPlan.id, updatedPlan.title);
+                    await notifications_1.notificationsService.create(notificationData);
+                }
+            }
+            catch (error) {
+                console.error('Error creating diet plan activation notification:', error);
+                // Don't fail the request if notification fails
+            }
+        }
         // Invalidate cache
         await redis_1.redisService.delete(`dietPlans:${id}`);
         await redis_1.redisService.delete('dietPlans:all');

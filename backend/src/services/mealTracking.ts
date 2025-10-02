@@ -1,5 +1,5 @@
 import { FirestoreService } from './firestore';
-import { MealTracking } from '../../../src/lib/types';
+import { MealTracking } from '../types';
 
 export const mealTrackingService = {
   // Get all meal tracking records

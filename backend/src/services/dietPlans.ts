@@ -1,5 +1,5 @@
 import { FirestoreService } from './firestore';
-import { DietPlan } from '../../../src/lib/types';
+import { DietPlan } from '../types';
 
 export const dietPlansService = {
   // Get all diet plans

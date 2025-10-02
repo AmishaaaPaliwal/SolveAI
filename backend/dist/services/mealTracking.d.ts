@@ -1,4 +1,4 @@
-import { MealTracking } from '../../../src/lib/types';
+import { MealTracking } from '../types';
 export declare const mealTrackingService: {
     getAll: () => Promise<MealTracking[]>;
     getById: (id: string) => Promise<MealTracking | null>;

@@ -10,6 +10,10 @@ declare class AIService {
      */
     private getNutritionalData;
     /**
+     * Get relevant AYUSH policies for diet plan generation
+     */
+    private getRelevantPolicies;
+    /**
      * Generate personalized Ayurvedic diet plan
      */
     generateDietPlan(patientData: {
@@ -22,6 +26,7 @@ declare class AIService {
         recommendations: string[];
         warnings: string[];
         nutritionalData?: any[];
+        policyCompliance?: any;
     }>;
     /**
      * Analyze patient dosha based on symptoms and characteristics

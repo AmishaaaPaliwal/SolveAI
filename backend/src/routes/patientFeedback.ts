@@ -11,14 +11,14 @@ router.get('/', async (req, res) => {
   try {
     // Check cache first
     const cacheKey = 'patientFeedback:all';
-    let feedback = await redisService.getCachedPatientData(cacheKey);
+    let feedback = await redisService.get(cacheKey);
 
     if (!feedback) {
       // Fetch from Firestore
       feedback = await patientFeedbackService.getAll();
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, feedback);
+      await redisService.setWithTTL(cacheKey, feedback, 1800);
     }
 
     res.json({
@@ -83,14 +83,14 @@ router.get('/patient/:patientId', async (req, res) => {
 
     // Check cache first
     const cacheKey = `patientFeedback:patient:${patientId}`;
-    let feedback = await redisService.getCachedPatientData(cacheKey);
+    let feedback = await redisService.get(cacheKey);
 
     if (!feedback) {
       // Fetch from Firestore
       feedback = await patientFeedbackService.getByPatient(patientId);
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, feedback);
+      await redisService.setWithTTL(cacheKey, feedback, 1800);
     }
 
     res.json({
@@ -115,14 +115,14 @@ router.get('/dietPlan/:dietPlanId', async (req, res) => {
 
     // Check cache first
     const cacheKey = `patientFeedback:dietPlan:${dietPlanId}`;
-    let feedback = await redisService.getCachedPatientData(cacheKey);
+    let feedback = await redisService.get(cacheKey);
 
     if (!feedback) {
       // Fetch from Firestore
       feedback = await patientFeedbackService.getByDietPlan(dietPlanId);
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, feedback);
+      await redisService.setWithTTL(cacheKey, feedback, 1800);
     }
 
     res.json({

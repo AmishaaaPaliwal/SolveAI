@@ -1,5 +1,5 @@
 import { FirestoreService } from './firestore';
-import { Consultation } from '../../../src/lib/types';
+import { Consultation } from '../types';
 
 export const consultationsService = {
   // Get all consultations

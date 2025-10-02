@@ -1,4 +1,4 @@
-import { PatientFeedback } from '../../../src/lib/types';
+import { PatientFeedback } from '../types';
 export declare const patientFeedbackService: {
     getAll: () => Promise<PatientFeedback[]>;
     getById: (id: string) => Promise<PatientFeedback | null>;

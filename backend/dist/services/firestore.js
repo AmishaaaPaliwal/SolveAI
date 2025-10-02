@@ -1,7 +1,7 @@
 "use strict";
 // Backend Firestore service using Firebase Admin SDK
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.patientsService = exports.FirestoreService = void 0;
+exports.dietPlansService = exports.consultationsService = exports.vitalsService = exports.usersService = exports.hospitalsService = exports.patientsService = exports.FirestoreService = void 0;
 const firebase_1 = require("./firebase");
 // Generic CRUD functions
 class FirestoreService {
@@ -95,5 +95,86 @@ exports.patientsService = {
     update: (id, data) => FirestoreService.update('patients', id, data),
     // Delete patient
     delete: (id) => FirestoreService.delete('patients', id),
+};
+// Specific service functions for hospitals
+exports.hospitalsService = {
+    // Get all hospitals
+    getAll: () => FirestoreService.getAll('hospitals'),
+    // Get hospital by ID
+    getById: (id) => FirestoreService.getById('hospitals', id),
+    // Create hospital
+    create: (data) => FirestoreService.create('hospitals', data),
+    // Update hospital
+    update: (id, data) => FirestoreService.update('hospitals', id, data),
+    // Delete hospital
+    delete: (id) => FirestoreService.delete('hospitals', id),
+};
+// Specific service functions for users
+exports.usersService = {
+    // Get all users
+    getAll: () => FirestoreService.getAll('users'),
+    // Get user by ID (uid)
+    getById: (uid) => FirestoreService.getById('users', uid),
+    // Get users by role
+    getByRole: (role) => FirestoreService.getAll('users', (query) => query.where('role', '==', role)),
+    // Get users by hospital
+    getByHospital: (hospitalId) => FirestoreService.getAll('users', (query) => query.where('hospitalId', '==', hospitalId)),
+    // Create user (uid as document ID)
+    create: async (data) => {
+        try {
+            const collectionRef = firebase_1.db.collection('users');
+            await collectionRef.doc(data.uid).set({
+                ...data,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+            });
+            return { ...data, id: data.uid };
+        }
+        catch (error) {
+            console.error(`Error creating user ${data.uid}:`, error);
+            throw error;
+        }
+    },
+    // Update user
+    update: (uid, data) => FirestoreService.update('users', uid, data),
+    // Delete user
+    delete: (uid) => FirestoreService.delete('users', uid),
+};
+// Specific service functions for vitals
+exports.vitalsService = {
+    // Get all vitals for a patient
+    getByPatient: (patientId) => FirestoreService.getAll('vitals', (query) => query.where('patientId', '==', patientId).orderBy('date', 'desc')),
+    // Create vitals record
+    create: (data) => FirestoreService.create('vitals', data),
+    // Update vitals record
+    update: (id, data) => FirestoreService.update('vitals', id, data),
+    // Delete vitals record
+    delete: (id) => FirestoreService.delete('vitals', id),
+};
+// Specific service functions for consultations
+exports.consultationsService = {
+    // Get all consultations
+    getAll: () => FirestoreService.getAll('consultations', (query) => query.orderBy('date', 'desc')),
+    // Get consultations for a patient
+    getByPatient: (patientId) => FirestoreService.getAll('consultations', (query) => query.where('patientId', '==', patientId).orderBy('date', 'desc')),
+    // Get consultations for a dietitian
+    getByDietitian: (dietitianId) => FirestoreService.getAll('consultations', (query) => query.where('dietitianId', '==', dietitianId).orderBy('date', 'desc')),
+    // Create consultation
+    create: (data) => FirestoreService.create('consultations', data),
+    // Update consultation
+    update: (id, data) => FirestoreService.update('consultations', id, data),
+};
+// Specific service functions for diet plans
+exports.dietPlansService = {
+    // Get all diet plans
+    getAll: () => FirestoreService.getAll('dietPlans', (query) => query.orderBy('createdAt', 'desc')),
+    // Get all diet plans for a patient
+    getByPatient: (patientId) => FirestoreService.getAll('dietPlans', (query) => query.where('patientId', '==', patientId).orderBy('createdAt', 'desc')),
+    // Create diet plan
+    create: (data) => FirestoreService.create('dietPlans', data),
+    // Update diet plan
+    update: (id, data) => FirestoreService.update('dietPlans', id, data),
+    // Delete diet plan
+    delete: (id) => FirestoreService.delete('dietPlans', id),
 };
 //# sourceMappingURL=firestore.js.map

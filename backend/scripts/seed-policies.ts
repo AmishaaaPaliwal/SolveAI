@@ -3,7 +3,7 @@
 // Seed script for AYUSH policies and Ayurvedic guidelines
 
 import { policiesService } from '../src/services/policies';
-import { PolicyDocument } from '../../src/lib/types';
+import { PolicyDocument } from '../src/types';
 
 const ayushPolicies: Omit<PolicyDocument, 'id'>[] = [
   {

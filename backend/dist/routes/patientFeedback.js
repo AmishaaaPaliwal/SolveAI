@@ -13,12 +13,12 @@ router.get('/', async (req, res) => {
     try {
         // Check cache first
         const cacheKey = 'patientFeedback:all';
-        let feedback = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let feedback = await redis_1.redisService.get(cacheKey);
         if (!feedback) {
             // Fetch from Firestore
             feedback = await patientFeedback_1.patientFeedbackService.getAll();
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, feedback);
+            await redis_1.redisService.setWithTTL(cacheKey, feedback, 1800);
         }
         res.json({
             success: true,
@@ -76,12 +76,12 @@ router.get('/patient/:patientId', async (req, res) => {
         const { patientId } = req.params;
         // Check cache first
         const cacheKey = `patientFeedback:patient:${patientId}`;
-        let feedback = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let feedback = await redis_1.redisService.get(cacheKey);
         if (!feedback) {
             // Fetch from Firestore
             feedback = await patientFeedback_1.patientFeedbackService.getByPatient(patientId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, feedback);
+            await redis_1.redisService.setWithTTL(cacheKey, feedback, 1800);
         }
         res.json({
             success: true,
@@ -104,12 +104,12 @@ router.get('/dietPlan/:dietPlanId', async (req, res) => {
         const { dietPlanId } = req.params;
         // Check cache first
         const cacheKey = `patientFeedback:dietPlan:${dietPlanId}`;
-        let feedback = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let feedback = await redis_1.redisService.get(cacheKey);
         if (!feedback) {
             // Fetch from Firestore
             feedback = await patientFeedback_1.patientFeedbackService.getByDietPlan(dietPlanId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, feedback);
+            await redis_1.redisService.setWithTTL(cacheKey, feedback, 1800);
         }
         res.json({
             success: true,

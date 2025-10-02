@@ -1,4 +1,4 @@
-import { DietPlan } from '../../../src/lib/types';
+import { DietPlan } from '../types';
 export declare const dietPlansService: {
     getAll: () => Promise<DietPlan[]>;
     getById: (id: string) => Promise<DietPlan | null>;

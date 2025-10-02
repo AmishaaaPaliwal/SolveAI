@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const redis_1 = require("./services/redis");
+const scheduler_1 = require("./services/scheduler");
 // Load environment variables
 dotenv_1.default.config();
 // Import routes
@@ -20,13 +21,15 @@ const consultations_1 = __importDefault(require("./routes/consultations"));
 const patientFeedback_1 = __importDefault(require("./routes/patientFeedback"));
 const ai_1 = __importDefault(require("./routes/ai"));
 const foods_1 = __importDefault(require("./routes/foods"));
+const notifications_1 = __importDefault(require("./routes/notifications"));
+const policies_1 = __importDefault(require("./routes/policies"));
 // Initialize Express app
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
 // Middleware
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:9002'],
     credentials: true
 }));
 app.use(express_1.default.json({ limit: '10mb' }));
@@ -36,7 +39,7 @@ app.get('/health', (req, res) => {
     res.json({
         status: 'OK',
         timestamp: new Date().toISOString(),
-        service: 'AyurTrack Backend API'
+        service: 'SolveAI Backend API'
     });
 });
 // API routes
@@ -49,6 +52,8 @@ app.use('/api/consultations', consultations_1.default);
 app.use('/api/patient-feedback', patientFeedback_1.default);
 app.use('/api/ai', ai_1.default);
 app.use('/api/foods', foods_1.default);
+app.use('/api/notifications', notifications_1.default);
+app.use('/api/policies', policies_1.default);
 // 404 handler - must be placed after all other routes
 app.use((req, res) => {
     res.status(404).json({
@@ -81,10 +86,12 @@ async function initializeServices() {
 // Start server
 async function startServer() {
     await initializeServices();
+    (0, scheduler_1.initializeScheduler)();
     app.listen(PORT, () => {
-        console.log(`🚀 AyurTrack Backend API running on port ${PORT}`);
+        console.log(`🚀 SolveAI Backend API running on port ${PORT}`);
         console.log(`📊 Health check: http://localhost:${PORT}/health`);
         console.log(`🤖 AI endpoints: http://localhost:${PORT}/api/ai`);
+        console.log(`🔔 Notifications: http://localhost:${PORT}/api/notifications`);
         console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     });
 }

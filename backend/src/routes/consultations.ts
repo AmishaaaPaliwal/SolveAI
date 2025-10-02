@@ -11,14 +11,14 @@ router.get('/', async (req, res) => {
   try {
     // Check cache first
     const cacheKey = 'consultations:all';
-    let consultations = await redisService.getCachedPatientData(cacheKey);
+    let consultations = await redisService.get(cacheKey);
 
     if (!consultations) {
       // Fetch from Firestore
       consultations = await consultationsService.getAll();
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, consultations);
+      await redisService.setWithTTL(cacheKey, consultations, 1800);
     }
 
     res.json({
@@ -42,7 +42,7 @@ router.get('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Check cache first
-    let consultation = await redisService.getCachedPatientData(id);
+    let consultation = await redisService.get(id);
 
     if (!consultation) {
       // Fetch from Firestore
@@ -50,7 +50,7 @@ router.get('/:id', async (req, res) => {
 
       if (consultation) {
         // Cache for 1 hour
-        await redisService.cachePatientData(id, consultation);
+        await redisService.setWithTTL(id, consultation, 3600);
       }
     }
 
@@ -83,14 +83,14 @@ router.get('/patient/:patientId', async (req, res) => {
 
     // Check cache first
     const cacheKey = `consultations:patient:${patientId}`;
-    let consultations = await redisService.getCachedPatientData(cacheKey);
+    let consultations = await redisService.get(cacheKey);
 
     if (!consultations) {
       // Fetch from Firestore
       consultations = await consultationsService.getByPatient(patientId);
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, consultations);
+      await redisService.setWithTTL(cacheKey, consultations, 1800);
     }
 
     res.json({
@@ -115,14 +115,14 @@ router.get('/dietitian/:dietitianId', async (req, res) => {
 
     // Check cache first
     const cacheKey = `consultations:dietitian:${dietitianId}`;
-    let consultations = await redisService.getCachedPatientData(cacheKey);
+    let consultations = await redisService.get(cacheKey);
 
     if (!consultations) {
       // Fetch from Firestore
       consultations = await consultationsService.getByDietitian(dietitianId);
 
       // Cache for 30 minutes
-      await redisService.cachePatientData(cacheKey, consultations);
+      await redisService.setWithTTL(cacheKey, consultations, 1800);
     }
 
     res.json({

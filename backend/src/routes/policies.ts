@@ -1,6 +1,6 @@
 import express from 'express';
 import { policiesService } from '../services/policies';
-import { PolicySearchRequest } from '../../../src/lib/types';
+import { PolicySearchRequest } from '../types';
 
 const router = express.Router();
 

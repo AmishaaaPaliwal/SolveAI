@@ -1,4 +1,4 @@
-import { Vitals } from '../../../src/lib/types';
+import { Vitals } from '../types';
 export declare const vitalsService: {
     getAll: () => Promise<Vitals[]>;
     getById: (id: string) => Promise<Vitals | null>;

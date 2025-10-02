@@ -1,4 +1,4 @@
-import { MessMenu } from '../../../src/lib/types';
+import { MessMenu } from '../types';
 export declare const messMenusService: {
     getAll: () => Promise<MessMenu[]>;
     getById: (id: string) => Promise<MessMenu | null>;

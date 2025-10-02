@@ -1,5 +1,5 @@
 import { FirestoreService } from './firestore';
-import { Vitals } from '../../../src/lib/types';
+import { Vitals } from '../types';
 
 export const vitalsService = {
   // Get all vitals

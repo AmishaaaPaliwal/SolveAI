@@ -21,14 +21,14 @@ router.get('/', async (req, res) => {
 
     // Check cache first
     const cacheKey = `notifications:${userId}`;
-    let notifications = await redisService.getCachedPatientData(cacheKey);
+    let notifications = await redisService.get(cacheKey);
 
     if (!notifications) {
       // Fetch from Firestore
       notifications = await notificationsService.getAll(userId);
 
       // Cache for 5 minutes
-      await redisService.cachePatientData(cacheKey, notifications);
+      await redisService.setWithTTL(cacheKey, notifications, 300);
     }
 
     res.json({

@@ -1,6 +1,6 @@
 import { FirestoreService } from './firestore';
 import { db } from './firebase';
-import { PolicyDocument, PolicySearchRequest, PolicyComplianceCheck, DietPlanCompliance, Patient } from '../../../src/lib/types';
+import { PolicyDocument, PolicySearchRequest, PolicyComplianceCheck, DietPlanCompliance, Patient } from '../types';
 
 export const policiesService = {
   // Get all policy documents

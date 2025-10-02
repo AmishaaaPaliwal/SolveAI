@@ -13,12 +13,12 @@ router.get('/', async (req, res) => {
     try {
         // Check cache first
         const cacheKey = 'mealTracking:all';
-        let mealTracking = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let mealTracking = await redis_1.redisService.get(cacheKey);
         if (!mealTracking) {
             // Fetch from Firestore
             mealTracking = await mealTracking_1.mealTrackingService.getAll();
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, mealTracking);
+            await redis_1.redisService.setWithTTL(cacheKey, mealTracking, 1800);
         }
         res.json({
             success: true,
@@ -40,13 +40,13 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         // Check cache first
-        let mealTrack = await redis_1.redisService.getCachedPatientData(id);
+        let mealTrack = await redis_1.redisService.get(id);
         if (!mealTrack) {
             // Fetch from Firestore
             mealTrack = await mealTracking_1.mealTrackingService.getById(id);
             if (mealTrack) {
                 // Cache for 1 hour
-                await redis_1.redisService.cachePatientData(id, mealTrack);
+                await redis_1.redisService.setWithTTL(id, mealTrack, 3600);
             }
         }
         if (!mealTrack) {
@@ -76,12 +76,12 @@ router.get('/patient/:patientId', async (req, res) => {
         const { patientId } = req.params;
         // Check cache first
         const cacheKey = `mealTracking:patient:${patientId}`;
-        let mealTracking = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let mealTracking = await redis_1.redisService.get(cacheKey);
         if (!mealTracking) {
             // Fetch from Firestore
             mealTracking = await mealTracking_1.mealTrackingService.getByPatient(patientId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, mealTracking);
+            await redis_1.redisService.setWithTTL(cacheKey, mealTracking, 1800);
         }
         res.json({
             success: true,
@@ -104,12 +104,12 @@ router.get('/dietPlan/:dietPlanId', async (req, res) => {
         const { dietPlanId } = req.params;
         // Check cache first
         const cacheKey = `mealTracking:dietPlan:${dietPlanId}`;
-        let mealTracking = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let mealTracking = await redis_1.redisService.get(cacheKey);
         if (!mealTracking) {
             // Fetch from Firestore
             mealTracking = await mealTracking_1.mealTrackingService.getByDietPlan(dietPlanId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, mealTracking);
+            await redis_1.redisService.setWithTTL(cacheKey, mealTracking, 1800);
         }
         res.json({
             success: true,

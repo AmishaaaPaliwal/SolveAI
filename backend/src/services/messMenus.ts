@@ -1,5 +1,5 @@
 import { FirestoreService } from './firestore';
-import { MessMenu } from '../../../src/lib/types';
+import { MessMenu } from '../types';
 
 export const messMenusService = {
   // Get all mess menus

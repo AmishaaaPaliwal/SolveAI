@@ -1,4 +1,4 @@
-import { Consultation } from '../../../src/lib/types';
+import { Consultation } from '../types';
 export declare const consultationsService: {
     getAll: () => Promise<Consultation[]>;
     getById: (id: string) => Promise<Consultation | null>;

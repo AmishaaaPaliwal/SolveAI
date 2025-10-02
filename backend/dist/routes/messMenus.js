@@ -13,12 +13,12 @@ router.get('/', async (req, res) => {
     try {
         // Check cache first
         const cacheKey = 'messMenus:all';
-        let messMenus = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let messMenus = await redis_1.redisService.get(cacheKey);
         if (!messMenus) {
             // Fetch from Firestore
             messMenus = await messMenus_1.messMenusService.getAll();
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, messMenus);
+            await redis_1.redisService.setWithTTL(cacheKey, messMenus, 1800);
         }
         res.json({
             success: true,
@@ -40,13 +40,13 @@ router.get('/:id', async (req, res) => {
     try {
         const { id } = req.params;
         // Check cache first
-        let messMenu = await redis_1.redisService.getCachedPatientData(id);
+        let messMenu = await redis_1.redisService.get(id);
         if (!messMenu) {
             // Fetch from Firestore
             messMenu = await messMenus_1.messMenusService.getById(id);
             if (messMenu) {
                 // Cache for 1 hour
-                await redis_1.redisService.cachePatientData(id, messMenu);
+                await redis_1.redisService.setWithTTL(id, messMenu, 3600);
             }
         }
         if (!messMenu) {
@@ -76,12 +76,12 @@ router.get('/hospital/:hospitalId', async (req, res) => {
         const { hospitalId } = req.params;
         // Check cache first
         const cacheKey = `messMenus:hospital:${hospitalId}`;
-        let messMenus = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let messMenus = await redis_1.redisService.get(cacheKey);
         if (!messMenus) {
             // Fetch from Firestore
             messMenus = await messMenus_1.messMenusService.getByHospital(hospitalId);
             // Cache for 30 minutes
-            await redis_1.redisService.cachePatientData(cacheKey, messMenus);
+            await redis_1.redisService.setWithTTL(cacheKey, messMenus, 1800);
         }
         res.json({
             success: true,
@@ -105,14 +105,14 @@ router.get('/hospital/:hospitalId/date/:date', async (req, res) => {
         const menuDate = new Date(date);
         // Check cache first
         const cacheKey = `messMenus:hospital:${hospitalId}:date:${date}`;
-        let messMenu = await redis_1.redisService.getCachedPatientData(cacheKey);
+        let messMenu = await redis_1.redisService.get(cacheKey);
         if (!messMenu) {
             // Fetch from Firestore
             const menus = await messMenus_1.messMenusService.getByDateAndHospital(menuDate, hospitalId);
             messMenu = menus.length > 0 ? menus[0] : null;
             if (messMenu) {
                 // Cache for 1 hour
-                await redis_1.redisService.cachePatientData(cacheKey, messMenu);
+                await redis_1.redisService.setWithTTL(cacheKey, messMenu, 3600);
             }
         }
         if (!messMenu) {
