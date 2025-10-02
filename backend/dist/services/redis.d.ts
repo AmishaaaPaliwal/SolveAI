@@ -1,6 +1,7 @@
 declare class RedisService {
     private client;
     private _isConnected;
+    private _isConnecting;
     constructor();
     connect(): Promise<void>;
     disconnect(): Promise<void>;

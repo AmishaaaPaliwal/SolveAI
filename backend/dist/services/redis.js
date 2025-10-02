@@ -6,8 +6,20 @@ const redis_1 = require("redis");
 class RedisService {
     constructor() {
         this._isConnected = false;
+        this._isConnecting = false;
         this.client = (0, redis_1.createClient)({
-            url: process.env.REDIS_URL || 'redis://localhost:6379'
+            url: process.env.REDIS_URL || 'redis://localhost:6379',
+            socket: {
+                reconnectStrategy: (retries) => {
+                    if (retries > 10) {
+                        console.log('❌ Redis: Max reconnection attempts reached');
+                        return new Error('Max reconnection attempts reached');
+                    }
+                    const delay = Math.min(retries * 100, 3000);
+                    console.log(`🔄 Redis: Reconnecting in ${delay}ms...`);
+                    return delay;
+                }
+            }
         });
         this.client.on('error', (err) => {
             console.error('Redis Client Error:', err);
@@ -19,26 +31,43 @@ class RedisService {
         this.client.on('ready', () => {
             console.log('✅ Redis ready');
             this._isConnected = true;
+            this._isConnecting = false;
         });
         this.client.on('end', () => {
             console.log('❌ Redis disconnected');
             this._isConnected = false;
+            this._isConnecting = false;
+        });
+        this.client.on('reconnecting', () => {
+            console.log('🔄 Redis reconnecting...');
+            this._isConnecting = true;
         });
     }
     async connect() {
+        if (this._isConnected || this._isConnecting) {
+            return;
+        }
         try {
-            if (!this.isConnected) {
-                await this.client.connect();
-            }
+            this._isConnecting = true;
+            await this.client.connect();
         }
         catch (error) {
-            console.error('Redis connection failed, continuing without Redis:', error);
-            // Don't throw, continue without Redis
+            console.error('⚠️  Redis connection failed, continuing without cache:', error);
+            this._isConnected = false;
+            this._isConnecting = false;
+            // Don't throw, allow app to continue without Redis
         }
     }
     async disconnect() {
-        if (this.isConnected) {
-            await this.client.disconnect();
+        if (this._isConnected || this.client.isOpen) {
+            try {
+                await this.client.disconnect();
+                this._isConnected = false;
+                this._isConnecting = false;
+            }
+            catch (error) {
+                console.error('Redis disconnect error:', error);
+            }
         }
     }
     // Generic cache operations
@@ -56,7 +85,7 @@ class RedisService {
         }
         catch (error) {
             console.error('Redis SET error:', error);
-            throw error;
+            // Gracefully degrade - don't throw
         }
     }
     async get(key) {
@@ -68,7 +97,7 @@ class RedisService {
         }
         catch (error) {
             console.error('Redis GET error:', error);
-            throw error;
+            return null; // Gracefully degrade
         }
     }
     async delete(key) {
@@ -80,7 +109,7 @@ class RedisService {
         }
         catch (error) {
             console.error('Redis DELETE error:', error);
-            throw error;
+            return false;
         }
     }
     async exists(key) {
@@ -92,7 +121,7 @@ class RedisService {
         }
         catch (error) {
             console.error('Redis EXISTS error:', error);
-            throw error;
+            return false;
         }
     }
     // Cache with TTL (Time To Live)
@@ -152,22 +181,36 @@ class RedisService {
     async incrementRateLimit(identifier, windowSeconds = 60) {
         if (!this.isConnected)
             return 1; // Allow if Redis not available
-        const key = `rate_limit:${identifier}`;
-        const count = await this.client.incr(key);
-        if (count === 1) {
-            await this.client.expire(key, windowSeconds);
+        try {
+            const key = `rate_limit:${identifier}`;
+            const count = await this.client.incr(key);
+            if (count === 1) {
+                await this.client.expire(key, windowSeconds);
+            }
+            return count;
         }
-        return count;
+        catch (error) {
+            console.error('Redis rate limit error:', error);
+            return 1; // Allow on error
+        }
     }
     async getRateLimit(identifier) {
         if (!this.isConnected)
             return 0;
-        const key = `rate_limit:${identifier}`;
-        const count = await this.client.get(key);
-        return count ? parseInt(count) : 0;
+        try {
+            const key = `rate_limit:${identifier}`;
+            const count = await this.client.get(key);
+            return count ? parseInt(count) : 0;
+        }
+        catch (error) {
+            console.error('Redis get rate limit error:', error);
+            return 0;
+        }
     }
     // Health check
     async ping() {
+        if (!this.isConnected)
+            return false;
         try {
             const result = await this.client.ping();
             return result === 'PONG';
@@ -178,7 +221,7 @@ class RedisService {
     }
     // Get connection status
     get isConnected() {
-        return this._isConnected;
+        return this._isConnected && this.client.isOpen;
     }
 }
 // Export singleton instance
