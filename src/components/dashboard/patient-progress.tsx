@@ -59,9 +59,10 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, BarC
 
 interface PatientProgressProps {
   patientId?: string; // If provided, show specific patient, otherwise show overview
+  userType?: 'patient' | 'dietitian' | 'hospital'; // Controls what data user can access
 }
 
-export function PatientProgress({ patientId }: PatientProgressProps) {
+export function PatientProgress({ patientId, userType = 'patient' }: PatientProgressProps) {
    const { toast } = useToast();
    const [patients, setPatients] = useState<Patient[]>([]);
    const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -107,10 +108,13 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
   useEffect(() => {
     if (patientId) {
       loadPatientData(patientId);
-    } else {
+    } else if (userType === 'dietitian' || userType === 'hospital') {
       loadAllPatients();
+    } else {
+      // For patients without patientId, this shouldn't happen in normal flow
+      setIsLoading(false);
     }
-  }, [patientId]);
+  }, [patientId, userType]);
 
   const loadAllPatients = async () => {
     try {
@@ -229,8 +233,8 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
     );
   }
 
-  // Patient selection view
-  if (!selectedPatient && !patientId) {
+  // Patient selection view (only for dietitians/hospital staff)
+  if (!selectedPatient && !patientId && (userType === 'dietitian' || userType === 'hospital')) {
     return (
       <Card>
         <CardHeader>
@@ -278,6 +282,32 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
     );
   }
 
+  // For patients without data or access
+  if (userType === 'patient' && (!selectedPatient || !patientId)) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Your Progress Dashboard
+          </CardTitle>
+          <CardDescription>
+            Track your health improvements and monitor your Ayurvedic journey.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <BarChart3 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground mb-2">No progress data available yet.</p>
+            <p className="text-sm text-muted-foreground">
+              Start by submitting your daily feedback and recording your vitals to see your progress here.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Individual patient progress view
   const metrics = calculateProgressMetrics();
 
@@ -290,10 +320,13 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Progress: {selectedPatient?.name}
+                {userType === 'patient' ? 'Your Progress' : `Progress: ${selectedPatient?.name}`}
               </CardTitle>
               <CardDescription>
-                Track improvements and monitor patient health metrics over time
+                {userType === 'patient'
+                  ? 'Track your health improvements and monitor your Ayurvedic journey'
+                  : 'Track improvements and monitor patient health metrics over time'
+                }
               </CardDescription>
             </div>
             <div className="flex gap-2">
@@ -348,17 +381,18 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
                  </div>
                </div>
 
-               <div className="flex gap-2">
-                 <Button
-                   variant="outline"
-                   onClick={() => exportPatientProgressToPDF(selectedPatient!, vitalsHistory, feedbackHistory, consultations)}
-                 >
-                   <Download className="mr-2 h-4 w-4" />
-                   Export PDF
-                 </Button>
-                 <Button
-                   variant="outline"
-                   onClick={() => {
+               {userType !== 'patient' && (
+                 <div className="flex gap-2">
+                   <Button
+                     variant="outline"
+                     onClick={() => exportPatientProgressToPDF(selectedPatient!, vitalsHistory, feedbackHistory, consultations)}
+                   >
+                     <Download className="mr-2 h-4 w-4" />
+                     Export PDF
+                   </Button>
+                   <Button
+                     variant="outline"
+                     onClick={() => {
                      const vitalsData = filterByDateRange(vitalsHistory).map(v => ({
                        date: format(getDateObject(v.date), "yyyy-MM-dd"),
                        weight: v.weight,
@@ -402,12 +436,13 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
                        exportToCSV(consultationsData, `${selectedPatient!.name}_consultations_${format(new Date(), "yyyy-MM-dd")}.csv`);
                      }
                    }}
-                 >
-                   <Download className="mr-2 h-4 w-4" />
-                   Export CSV
-                 </Button>
-               </div>
-               {!patientId && (
+                   >
+                     <Download className="mr-2 h-4 w-4" />
+                     Export CSV
+                   </Button>
+                 </div>
+               )}
+               {!patientId && (userType === 'dietitian' || userType === 'hospital') && (
                  <Button variant="outline" onClick={() => setSelectedPatient(null)}>
                    ← Back to Patients
                  </Button>
@@ -481,16 +516,29 @@ export function PatientProgress({ patientId }: PatientProgressProps) {
       {/* Detailed Progress Tabs */}
       <Tabs defaultValue="vitals" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="vitals">Vitals History</TabsTrigger>
-          <TabsTrigger value="feedback">Patient Feedback</TabsTrigger>
-          <TabsTrigger value="consultations">Consultations</TabsTrigger>
+          <TabsTrigger value="vitals">
+            {userType === 'patient' ? 'My Vitals' : 'Vitals History'}
+          </TabsTrigger>
+          <TabsTrigger value="feedback">
+            {userType === 'patient' ? 'My Feedback' : 'Patient Feedback'}
+          </TabsTrigger>
+          <TabsTrigger value="consultations">
+            {userType === 'patient' ? 'My Consultations' : 'Consultations'}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="vitals" className="mt-4">
            <Card>
              <CardHeader>
-               <CardTitle>Vitals Trends</CardTitle>
-               <CardDescription>Interactive charts showing vital signs progression over time</CardDescription>
+               <CardTitle>
+                 {userType === 'patient' ? 'My Vitals Trends' : 'Vitals Trends'}
+               </CardTitle>
+               <CardDescription>
+                 {userType === 'patient'
+                   ? 'Track your vital signs progression over time'
+                   : 'Interactive charts showing vital signs progression over time'
+                 }
+               </CardDescription>
              </CardHeader>
              <CardContent>
                {filterByDateRange(vitalsHistory).length > 0 ? (

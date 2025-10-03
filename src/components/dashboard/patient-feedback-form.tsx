@@ -135,7 +135,7 @@ export function PatientFeedbackForm({
       }
 
       // Build feedback data object
-      const feedbackData = {
+      const feedbackData: any = {
         patientId: patientIdValue,
         dietPlanId: dietPlanIdValue,
         date: new Date(),
@@ -146,8 +146,13 @@ export function PatientFeedbackForm({
         waterIntake: parseInt(formData.get('waterIntake') as string) || 0,
         sleepQuality: parseInt(formData.get('sleepQuality') as string) as 1 | 2 | 3 | 4 | 5,
         overallFeeling: formData.get('overallFeeling') as 'much_better' | 'better' | 'same' | 'worse' | 'much_worse',
-        additionalNotes: (formData.get('additionalNotes') as string)?.trim() || undefined,
       };
+
+      // Only add additionalNotes if it has content
+      const additionalNotes = (formData.get('additionalNotes') as string)?.trim();
+      if (additionalNotes) {
+        feedbackData.additionalNotes = additionalNotes;
+      }
 
       await patientFeedbackService.create(feedbackData);
 

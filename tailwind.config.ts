@@ -9,6 +9,12 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '475px',
+        'tablet': '641px',
+        'desktop': '1025px',
+        'desktop-lg': '1441px',
+      },
       fontFamily: {
         body: ['Alegreya', 'serif'],
         headline: ['Alegreya', 'serif'],

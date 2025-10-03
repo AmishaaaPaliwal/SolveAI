@@ -26,35 +26,39 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <section id="features" className="w-full py-12 md:py-24 lg:py-32 bg-secondary/50">
-      <div className="container px-4 md:px-6">
-        <div className="flex flex-col items-center justify-center space-y-4 text-center">
-          <div className="space-y-2">
-            <h2 className="text-3xl font-bold tracking-tighter font-headline sm:text-5xl">Features for a Balanced Life</h2>
-            <p className="max-w-[900px] text-foreground/80 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
+    <section id="features" className="w-full py-8 xs:py-12 tablet:py-16 desktop:py-24 desktop-lg:py-32 bg-secondary/50">
+      <div className="container px-4 xs:px-6 tablet:px-8">
+        <div className="flex flex-col items-center justify-center space-y-3 tablet:space-y-4 text-center">
+          <div className="space-y-2 tablet:space-y-3">
+            <h2 className="text-2xl font-bold tracking-tighter font-headline xs:text-3xl tablet:text-4xl desktop:text-5xl">Features for a Balanced Life</h2>
+            <p className="max-w-[900px] text-sm xs:text-base tablet:text-lg desktop:text-xl text-foreground/80 text-balance leading-relaxed">
               SolveAI provides a complete suite of tools to help you, your dietitian, and hospital staff manage your health journey seamlessly.
             </p>
           </div>
         </div>
-        <div className="mx-auto grid max-w-5xl items-start gap-8 sm:grid-cols-2 md:gap-12 lg:max-w-none lg:grid-cols-3 pt-12">
+        <div className="mx-auto grid max-w-6xl items-start gap-4 xs:gap-6 tablet:gap-8
+                     grid-cols-1 xs:grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3
+                     pt-8 xs:pt-10 tablet:pt-12">
           {features.map((feature, index) => {
             const featureImage = PlaceHolderImages.find(img => img.id === feature.imageId);
             return (
               <Card key={index} className="h-full transform hover:-translate-y-2 transition-transform duration-300 ease-in-out shadow-lg hover:shadow-2xl">
-                <CardHeader className="items-center text-center">
+                <CardHeader className="items-center text-center p-4 xs:p-6">
                   {featureImage && (
-                    <Image 
+                    <Image
                       src={featureImage.imageUrl}
                       alt={feature.title}
                       width={600}
                       height={400}
                       data-ai-hint={featureImage.imageHint}
-                      className="rounded-lg mb-4 aspect-video object-cover"
+                      className="rounded-lg mb-3 xs:mb-4 aspect-video object-cover w-full"
                     />
                   )}
-                  {feature.icon}
-                  <CardTitle className="font-headline">{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
+                  <div className="flex flex-col items-center space-y-2 xs:space-y-3">
+                    {feature.icon}
+                    <CardTitle className="font-headline text-base xs:text-lg tablet:text-xl">{feature.title}</CardTitle>
+                    <CardDescription className="text-sm xs:text-base leading-relaxed">{feature.description}</CardDescription>
+                  </div>
                 </CardHeader>
               </Card>
             );

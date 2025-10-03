@@ -359,18 +359,18 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Utensils className="h-5 w-5" />
-              Meal Tracking - {patient.name}
+      <CardHeader className="pb-4 xs:pb-6">
+        <div className="flex flex-col xs:flex-row items-start xs:items-center justify-between gap-3 xs:gap-4">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="flex items-center gap-2 text-lg xs:text-xl">
+              <Utensils className="h-4 w-4 xs:h-5 xs:w-5 flex-shrink-0" />
+              <span className="truncate">Meal Tracking - {patient.name}</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-sm xs:text-base mt-1">
               Track meal service and consumption for today's diet plan
             </CardDescription>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 xs:gap-4 w-full xs:w-auto">
             <div className="flex items-center gap-2">
               <Label htmlFor="realtime-toggle" className="text-sm">
                 {realTimeEnabled ? <Wifi className="h-4 w-4 text-green-500" /> : <WifiOff className="h-4 w-4 text-muted-foreground" />}
@@ -389,6 +389,7 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
               size="sm"
               onClick={() => loadMealTracking()}
               disabled={isLoading}
+              className="flex-shrink-0"
             >
               <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             </Button>
@@ -411,42 +412,43 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
         {mealTracking.length > 0 && (
           <div className="space-y-3">
             {mealTracking.map((meal) => (
-              <div key={meal.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-medium capitalize">{meal.mealType}</h4>
+              <div key={meal.id} className="flex flex-col tablet:flex-row tablet:items-center justify-between p-3 xs:p-4 border rounded-lg gap-3 tablet:gap-4">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-medium capitalize text-sm xs:text-base">{meal.mealType}</h4>
                     <MealStatusBadge status={meal.status} />
                     {meal.quantity && <QuantityBadge quantity={meal.quantity} />}
                   </div>
 
-                  <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="text-xs xs:text-sm text-muted-foreground space-y-1">
                     {meal.givenBy && (
                       <div className="flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Given by {meal.givenBy} at {meal.givenAt ? new Date(meal.givenAt).toLocaleTimeString() : 'Unknown'}
+                        <CheckCircle className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">Given by {meal.givenBy} at {meal.givenAt ? new Date(meal.givenAt).toLocaleTimeString() : 'Unknown'}</span>
                       </div>
                     )}
 
                     {meal.eatenBy && (
                       <div className="flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {meal.quantity === 'none' ? 'Skipped' : `Eaten by ${meal.eatenBy}`}
-                        {meal.eatenAt && ` at ${new Date(meal.eatenAt).toLocaleTimeString()}`}
+                        <User className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{meal.quantity === 'none' ? 'Skipped' : `Eaten by ${meal.eatenBy}`}
+                        {meal.eatenAt && ` at ${new Date(meal.eatenAt).toLocaleTimeString()}`}</span>
                       </div>
                     )}
 
                     {meal.notes && (
-                      <div className="text-xs italic">Note: {meal.notes}</div>
+                      <div className="text-xs italic p-2 bg-secondary/50 rounded">Note: {meal.notes}</div>
                     )}
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-1 xs:gap-2 flex-shrink-0">
                   {meal.status === 'scheduled' && (
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => handleMarkAsGiven(meal.id)}
+                      className="text-xs xs:text-sm"
                     >
                       Mark Given
                     </Button>
@@ -458,22 +460,28 @@ export function MealTrackingComponent({ patient, dietPlan }: MealTrackingProps) 
                         size="sm"
                         variant="outline"
                         onClick={() => handleMarkAsEaten(meal.id, 'patient', 'full')}
+                        className="text-xs xs:text-sm px-2 xs:px-3"
                       >
-                        Eaten (Full)
+                        <span className="hidden xs:inline">Eaten (Full)</span>
+                        <span className="xs:hidden">Full</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => handleMarkAsEaten(meal.id, 'patient', 'half')}
+                        className="text-xs xs:text-sm px-2 xs:px-3"
                       >
-                        Eaten (Half)
+                        <span className="hidden xs:inline">Eaten (Half)</span>
+                        <span className="xs:hidden">Half</span>
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => handleMarkAsEaten(meal.id, 'patient', 'none')}
+                        className="text-xs xs:text-sm px-2 xs:px-3"
                       >
-                        Skipped
+                        <span className="hidden xs:inline">Skipped</span>
+                        <span className="xs:hidden">Skip</span>
                       </Button>
                     </div>
                   )}

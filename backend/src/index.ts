@@ -6,7 +6,11 @@ import { redisService } from './services/redis';
 import { initializeScheduler } from './services/scheduler';
 
 // Load environment variables
-dotenv.config();
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env.production' });
+} else {
+  dotenv.config();
+}
 
 // Import routes
 import patientRoutes from './routes/patients';
@@ -28,7 +32,13 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://localhost:9002'],
+  origin: process.env.FRONTEND_URL || [
+    'http://localhost:3000',
+    'http://localhost:9002',
+    'http://localhost:9003',
+    'https://your-project-id.web.app',
+    'https://your-project-id.firebaseapp.com'
+  ],
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -76,8 +86,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Initialize Redis connection
 async function initializeServices() {
   try {
-    await redisService.connect();
-    console.log('✅ Redis connected successfully');
+    // Only attempt Redis connection if a URL is explicitly provided
+    if (process.env.REDIS_URL && process.env.REDIS_URL.trim().length > 0) {
+      await redisService.connect();
+      console.log('✅ Redis connected successfully');
+    } else {
+      console.log('⚠️ Skipping Redis connection: REDIS_URL is not set');
+    }
   } catch (error) {
     console.error('❌ Redis connection failed:', error);
     // Continue without Redis in development
@@ -92,7 +107,7 @@ async function startServer() {
   await initializeServices();
   initializeScheduler();
 
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🚀 SolveAI Backend API running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/health`);
     console.log(`🤖 AI endpoints: http://localhost:${PORT}/api/ai`);

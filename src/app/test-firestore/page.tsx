@@ -1,5 +1,8 @@
 import { TestFirestore } from "@/components/test-firestore";
 
+// Force dynamic rendering to avoid Firebase initialization during build
+export const dynamic = 'force-dynamic';
+
 export default function TestFirestorePage() {
   return (
     <div className="container mx-auto py-8">

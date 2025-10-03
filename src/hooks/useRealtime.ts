@@ -198,6 +198,45 @@ export function useRealtimeConsultations(dietitianId?: string) {
   return { consultations, loading, error };
 }
 
+// Real-time patient feedback listener
+export function useRealtimePatientFeedback(patientId?: string) {
+  const [feedback, setFeedback] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    const constraints = patientId ? [where('patientId', '==', patientId)] : [];
+    const q = query(
+      collection(db, 'patientFeedback'),
+      ...constraints,
+      orderBy('date', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (querySnapshot) => {
+        const feedbackData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setFeedback(feedbackData);
+        setLoading(false);
+        setError(null);
+      },
+      (err) => {
+        setError(err);
+        setLoading(false);
+        console.error('Error in real-time patient feedback listener:', err);
+      }
+    );
+
+    return unsubscribe;
+  }, [patientId]);
+
+  return { feedback, loading, error };
+}
+
 // Generic real-time collection hook
 export function useRealtimeCollection<T>(
   collectionName: string,

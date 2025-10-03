@@ -13,7 +13,10 @@ class IFCTService {
   private db: Database.Database;
 
   constructor() {
-    const dbPath = path.join(__dirname, '../../data/ifct2017.db');
+    // Use absolute path for Docker compatibility
+    const dbPath = process.env.NODE_ENV === 'production'
+      ? '/app/data/ifct2017.db'
+      : path.join(__dirname, '../../data/ifct2017.db');
     this.db = new Database(dbPath, { readonly: true });
   }
 

@@ -1,6 +1,10 @@
 import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
+import { AuthProvider } from "@/lib/auth-context";
 import './globals.css';
+
+// Force dynamic rendering to avoid Firebase initialization during build
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'SolveAI | Personalized Ayurvedic Diet Management',
@@ -20,8 +24,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        {children}
-        <Toaster />
+        <AuthProvider>
+          {children}
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );

@@ -2,6 +2,8 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -9,6 +11,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',
@@ -29,6 +32,12 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  // Disable static optimization for all pages to avoid Firebase initialization during build
+  trailingSlash: false,
+  // Generate a unique build ID
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
   },
 };
 

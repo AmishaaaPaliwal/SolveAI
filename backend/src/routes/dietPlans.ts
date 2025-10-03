@@ -5,6 +5,7 @@ import { dietPlansService } from '../services/dietPlans';
 import { notificationsService, notificationHelpers } from '../services/notifications';
 import { redisService } from '../services/redis';
 import { patientsService } from '../services/firestore';
+import { PDFService } from '../services/pdfService';
 
 const router = express.Router();
 
@@ -137,6 +138,49 @@ router.get('/dietitian/:dietitianId', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch diet plans',
+      message: error.message
+    });
+  }
+});
+
+// GET /api/dietPlans/:id/pdf - Export diet plan as PDF
+router.get('/:id/pdf', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch diet plan
+    const dietPlan = await dietPlansService.getById(id);
+    if (!dietPlan) {
+      return res.status(404).json({
+        success: false,
+        error: 'Diet plan not found'
+      });
+    }
+
+    // Fetch patient details
+    const patient = await patientsService.getById(dietPlan.patientId);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        error: 'Patient not found'
+      });
+    }
+
+    // Generate PDF
+    const pdfBuffer = await PDFService.generateDietChartPDF(dietPlan, patient);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${patient.name}_diet_chart.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+
+    // Send PDF buffer
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('Error generating diet plan PDF:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to generate PDF',
       message: error.message
     });
   }

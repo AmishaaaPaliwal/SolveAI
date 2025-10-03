@@ -396,17 +396,24 @@ export const mealTrackingService = {
   },
 
   // Get today's meal tracking for a patient
-  getTodayMeals: (patientId: string) => {
+  getTodayMeals: async (patientId: string) => {
+    // Use client-side filtering to avoid requiring composite index
+    const allTracking = await FirestoreService.getAll<MealTracking>('mealTracking', [
+      where('patientId', '==', patientId)
+    ]);
+
+    // Filter for today's date on the client side
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    return FirestoreService.getAll<MealTracking>('mealTracking', [
-      where('patientId', '==', patientId),
-      where('scheduledDate', '>=', today),
-      where('scheduledDate', '<', tomorrow)
-    ]);
+    return allTracking.filter(tracking => {
+      const scheduledDate = tracking.scheduledDate instanceof Date
+        ? tracking.scheduledDate
+        : new Date((tracking.scheduledDate as any)?.seconds * 1000 || 0);
+      return scheduledDate >= today && scheduledDate < tomorrow;
+    });
   },
 
   // Create meal tracking record
@@ -439,12 +446,24 @@ export const mealTrackingService = {
   delete: (id: string) => FirestoreService.delete('mealTracking', id),
 
   // Subscribe to meal tracking updates for a patient
-  subscribe: (patientId: string, callback: (meals: MealTracking[]) => void) =>
-    FirestoreService.subscribeToCollection<MealTracking>(
+  subscribe: (patientId: string, callback: (meals: MealTracking[]) => void) => {
+    const unsubscribe = FirestoreService.subscribeToCollection<MealTracking>(
       'mealTracking',
-      callback,
-      [where('patientId', '==', patientId), orderBy('scheduledDate', 'desc')]
-    ),
+      (meals) => {
+        // Sort client-side to avoid requiring composite index
+        const sortedMeals = meals
+          .filter(meal => meal.patientId === patientId)
+          .sort((a, b) => {
+            const dateA = a.scheduledDate instanceof Date ? a.scheduledDate : new Date((a.scheduledDate as any)?.seconds * 1000 || 0);
+            const dateB = b.scheduledDate instanceof Date ? b.scheduledDate : new Date((b.scheduledDate as any)?.seconds * 1000 || 0);
+            return dateB.getTime() - dateA.getTime();
+          });
+        callback(sortedMeals);
+      },
+      [where('patientId', '==', patientId)]
+    );
+    return unsubscribe;
+  },
 };
 
 export const patientFeedbackService = {
@@ -642,6 +661,14 @@ export const seedData = {
         adminId: 'hospital-admin-uid-2',
         createdAt: new Date(),
       },
+      {
+        name: 'Ayurveda Wellness Center',
+        address: '789 Harmony Blvd, Wellness City, State 11111',
+        phone: '+1-555-0789',
+        email: 'admin@ayurvedacenter.com',
+        adminId: 'hospital-admin-uid-3',
+        createdAt: new Date(),
+      },
     ];
 
     const createdHospitals: Hospital[] = [];
@@ -649,9 +676,9 @@ export const seedData = {
       try {
         const created = await hospitalsService.create(hospital);
         createdHospitals.push(created);
-        console.log(`Seeded hospital: ${hospital.name}`);
+        console.log(`✅ Seeded hospital: ${hospital.name}`);
       } catch (error) {
-        console.error(`Error seeding hospital ${hospital.name}:`, error);
+        console.error(`❌ Error seeding hospital ${hospital.name}:`, error);
       }
     }
     return createdHospitals;
@@ -664,31 +691,13 @@ export const seedData = {
     }, {} as Record<string, string>);
 
     const sampleUsers = [
+      // Hospital Admins
       {
         uid: 'hospital-admin-uid-1',
         email: 'admin@citygeneral.com',
         displayName: 'Dr. Sarah Johnson',
         role: 'hospital-admin' as const,
         hospitalId: hospitalMap['City General Hospital'],
-        createdAt: new Date(),
-        lastLogin: new Date(),
-      },
-      {
-        uid: 'dietitian-uid-1',
-        email: 'dietitian@citygeneral.com',
-        displayName: 'Dr. Michael Chen',
-        role: 'dietitian' as const,
-        hospitalId: hospitalMap['City General Hospital'],
-        createdAt: new Date(),
-        lastLogin: new Date(),
-      },
-      {
-        uid: 'patient-uid-1',
-        email: 'patient1@citygeneral.com',
-        displayName: 'Alice Smith',
-        role: 'patient' as const,
-        hospitalId: hospitalMap['City General Hospital'],
-        patientId: 'patient-id-1',
         createdAt: new Date(),
         lastLogin: new Date(),
       },
@@ -701,22 +710,469 @@ export const seedData = {
         createdAt: new Date(),
         lastLogin: new Date(),
       },
+      {
+        uid: 'hospital-admin-uid-3',
+        email: 'admin@ayurvedacenter.com',
+        displayName: 'Dr. Priya Sharma',
+        role: 'hospital-admin' as const,
+        hospitalId: hospitalMap['Ayurveda Wellness Center'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+
+      // Dietitians
+      {
+        uid: 'dietitian-uid-1',
+        email: 'dietitian@citygeneral.com',
+        displayName: 'Dr. Michael Chen',
+        role: 'dietitian' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'dietitian-uid-2',
+        email: 'dietitian@regionalmed.com',
+        displayName: 'Dr. Emily Rodriguez',
+        role: 'dietitian' as const,
+        hospitalId: hospitalMap['Regional Medical Center'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'dietitian-uid-3',
+        email: 'dietitian@ayurvedacenter.com',
+        displayName: 'Dr. Arjun Patel',
+        role: 'dietitian' as const,
+        hospitalId: hospitalMap['Ayurveda Wellness Center'],
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+
+      // Patients
+      {
+        uid: 'patient-uid-1',
+        email: 'alice.smith@email.com',
+        displayName: 'Alice Smith',
+        role: 'patient' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        patientId: 'PAT001',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'patient-uid-2',
+        email: 'bob.wilson@email.com',
+        displayName: 'Bob Wilson',
+        role: 'patient' as const,
+        hospitalId: hospitalMap['Regional Medical Center'],
+        patientId: 'PAT002',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'patient-uid-3',
+        email: 'carol.brown@email.com',
+        displayName: 'Carol Brown',
+        role: 'patient' as const,
+        hospitalId: hospitalMap['Ayurveda Wellness Center'],
+        patientId: 'PAT003',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
+      {
+        uid: 'patient-uid-4',
+        email: 'david.lee@email.com',
+        displayName: 'David Lee',
+        role: 'patient' as const,
+        hospitalId: hospitalMap['City General Hospital'],
+        patientId: 'PAT004',
+        createdAt: new Date(),
+        lastLogin: new Date(),
+      },
     ];
 
     for (const user of sampleUsers) {
       try {
         await usersService.create(user);
-        console.log(`Seeded user: ${user.displayName}`);
+        console.log(`✅ Seeded user: ${user.displayName} (${user.role})`);
       } catch (error) {
-        console.error(`Error seeding user ${user.displayName}:`, error);
+        console.error(`❌ Error seeding user ${user.displayName}:`, error);
+      }
+    }
+  },
+
+  async seedPatients() {
+    const samplePatients = [
+      {
+        name: 'Alice Smith',
+        code: 'PAT001',
+        age: 28,
+        gender: 'Female' as const,
+        phone: '+1-555-1001',
+        email: 'alice.smith@email.com',
+        address: '123 Oak Street, City, State 12345',
+        registrationDate: new Date(),
+        lastUpdated: new Date(),
+        dietaryHabits: 'Vegetarian, avoids dairy',
+        allergies: ['Nuts', 'Shellfish'],
+        doshaType: 'Vata' as const,
+        emergencyContact: {
+          name: 'John Smith',
+          phone: '+1-555-2001',
+          relationship: 'Spouse'
+        },
+        hospitalId: '', // Will be set after hospitals are created
+        dietitianId: '',
+      },
+      {
+        name: 'Bob Wilson',
+        code: 'PAT002',
+        age: 35,
+        gender: 'Male' as const,
+        phone: '+1-555-1002',
+        email: 'bob.wilson@email.com',
+        address: '456 Pine Avenue, Town, State 67890',
+        registrationDate: new Date(),
+        lastUpdated: new Date(),
+        dietaryHabits: 'Non-vegetarian, low carb',
+        allergies: ['Gluten'],
+        doshaType: 'Pitta' as const,
+        emergencyContact: {
+          name: 'Mary Wilson',
+          phone: '+1-555-2002',
+          relationship: 'Wife'
+        },
+        hospitalId: '',
+        dietitianId: '',
+      },
+      {
+        name: 'Carol Brown',
+        code: 'PAT003',
+        age: 42,
+        gender: 'Female' as const,
+        phone: '+1-555-1003',
+        email: 'carol.brown@email.com',
+        address: '789 Elm Drive, Village, State 11111',
+        registrationDate: new Date(),
+        lastUpdated: new Date(),
+        dietaryHabits: 'Vegan, gluten-free',
+        allergies: ['Dairy', 'Soy'],
+        doshaType: 'Kapha' as const,
+        emergencyContact: {
+          name: 'Tom Brown',
+          phone: '+1-555-2003',
+          relationship: 'Brother'
+        },
+        hospitalId: '',
+        dietitianId: '',
+      },
+      {
+        name: 'David Lee',
+        code: 'PAT004',
+        age: 31,
+        gender: 'Male' as const,
+        phone: '+1-555-1004',
+        email: 'david.lee@email.com',
+        address: '321 Maple Lane, County, State 22222',
+        registrationDate: new Date(),
+        lastUpdated: new Date(),
+        dietaryHabits: 'Omnivore, prefers traditional foods',
+        allergies: [],
+        doshaType: 'Vata' as const,
+        emergencyContact: {
+          name: 'Lisa Lee',
+          phone: '+1-555-2004',
+          relationship: 'Sister'
+        },
+        hospitalId: '',
+        dietitianId: '',
+      },
+    ];
+
+    const createdPatients: Patient[] = [];
+    for (const patient of samplePatients) {
+      try {
+        const created = await patientsService.create({
+          ...patient,
+          lastUpdated: new Date()
+        });
+        createdPatients.push(created);
+        console.log(`✅ Seeded patient: ${patient.name} (${patient.code})`);
+      } catch (error) {
+        console.error(`❌ Error seeding patient ${patient.name}:`, error);
+      }
+    }
+    return createdPatients;
+  },
+
+  async seedVitals(patients: Patient[]) {
+    const sampleVitals = [];
+
+    for (const patient of patients) {
+      // Create multiple vitals records for each patient
+      const vitalsRecords = [
+        {
+          patientId: patient.id,
+          recordedBy: 'nurse-001',
+          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+          weight: patient.code === 'PAT001' ? 65.5 : patient.code === 'PAT002' ? 78.2 : patient.code === 'PAT003' ? 72.1 : 69.8,
+          height: 165,
+          bmi: patient.code === 'PAT001' ? 24.1 : patient.code === 'PAT002' ? 26.8 : patient.code === 'PAT003' ? 25.2 : 23.9,
+          bloodPressure: { systolic: 120, diastolic: 80 },
+          temperature: 98.6,
+          pulse: 72,
+          notes: 'Regular checkup - all normal',
+        },
+        {
+          patientId: patient.id,
+          recordedBy: 'nurse-001',
+          date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+          weight: patient.code === 'PAT001' ? 65.2 : patient.code === 'PAT002' ? 77.9 : patient.code === 'PAT003' ? 71.8 : 69.5,
+          height: 165,
+          bmi: patient.code === 'PAT001' ? 23.9 : patient.code === 'PAT002' ? 26.5 : patient.code === 'PAT003' ? 25.0 : 23.7,
+          bloodPressure: { systolic: 118, diastolic: 78 },
+          temperature: 98.4,
+          pulse: 70,
+          notes: 'Improving trends observed',
+        },
+        {
+          patientId: patient.id,
+          recordedBy: 'nurse-001',
+          date: new Date(), // Today
+          weight: patient.code === 'PAT001' ? 64.8 : patient.code === 'PAT002' ? 77.5 : patient.code === 'PAT003' ? 71.5 : 69.2,
+          height: 165,
+          bmi: patient.code === 'PAT001' ? 23.7 : patient.code === 'PAT002' ? 26.2 : patient.code === 'PAT003' ? 24.8 : 23.5,
+          bloodPressure: { systolic: 115, diastolic: 75 },
+          temperature: 98.2,
+          pulse: 68,
+          notes: 'Excellent progress - following diet plan well',
+        },
+      ];
+
+      sampleVitals.push(...vitalsRecords);
+    }
+
+    for (const vitals of sampleVitals) {
+      try {
+        await vitalsService.create(vitals);
+        console.log(`✅ Seeded vitals for patient ${vitals.patientId}`);
+      } catch (error) {
+        console.error(`❌ Error seeding vitals for patient ${vitals.patientId}:`, error);
+      }
+    }
+  },
+
+  async seedPatientFeedback(patients: Patient[]) {
+    const feedbackData = [];
+
+    for (const patient of patients) {
+      // Create feedback for the last 7 days
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+
+        feedbackData.push({
+          patientId: patient.id,
+          dietPlanId: `diet-plan-${patient.id}`,
+          date: date,
+          mealAdherence: {
+            breakfast: Math.random() > 0.2,
+            lunch: Math.random() > 0.15,
+            dinner: Math.random() > 0.25,
+            snacks: Math.random() > 0.3,
+          },
+          symptoms: i === 0 ? ['Slight headache'] : i === 2 ? ['Mild fatigue'] : [],
+          energyLevel: (Math.floor(Math.random() * 3) + 3) as 1 | 2 | 3 | 4 | 5, // 3-5
+          digestion: ['excellent', 'good', 'fair'][Math.floor(Math.random() * 3)] as any,
+          waterIntake: Math.floor(Math.random() * 4) + 6, // 6-10 glasses
+          sleepQuality: (Math.floor(Math.random() * 2) + 4) as 1 | 2 | 3 | 4 | 5, // 4-5
+          overallFeeling: ['better', 'same', 'much_better'][Math.floor(Math.random() * 3)] as any,
+          ...(i === 0 && { additionalNotes: 'Feeling more energetic after following the diet plan' }),
+        });
+      }
+    }
+
+    for (const feedback of feedbackData) {
+      try {
+        await patientFeedbackService.create(feedback);
+        console.log(`✅ Seeded feedback for patient ${feedback.patientId}`);
+      } catch (error) {
+        console.error(`❌ Error seeding feedback for patient ${feedback.patientId}:`, error);
+      }
+    }
+  },
+
+  async seedDietPlans(patients: Patient[]) {
+    const dietPlans = [];
+
+    for (const patient of patients) {
+      const basePlan = {
+        patientId: patient.id,
+        dietitianId: patient.hospitalId === 'city-general' ? 'dietitian-uid-1' : 'dietitian-uid-2',
+        title: `Ayurvedic Diet Plan for ${patient.name}`,
+        description: `Personalized Ayurvedic diet plan based on ${patient.doshaType} constitution and health goals.`,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isActive: true,
+        dietDays: [
+          {
+            day: 'Monday',
+            meals: [
+              {
+                name: 'Breakfast',
+                time: '7:00 AM',
+                items: ['Poha', 'Green Tea', 'Fresh Fruits'],
+                notes: 'Light and energizing start to the day'
+              },
+              {
+                name: 'Lunch',
+                time: '12:30 PM',
+                items: ['Khichdi', 'Mixed Vegetables', 'Buttermilk'],
+                notes: 'Balanced and nourishing midday meal'
+              },
+              {
+                name: 'Dinner',
+                time: '7:00 PM',
+                items: ['Roti', 'Moong Dal', 'Steamed Vegetables'],
+                notes: 'Light evening meal for good digestion'
+              }
+            ]
+          },
+          {
+            day: 'Tuesday',
+            meals: [
+              {
+                name: 'Breakfast',
+                time: '7:00 AM',
+                items: ['Upma', 'Herbal Tea', 'Seasonal Fruits'],
+                notes: 'Warming and grounding breakfast'
+              },
+              {
+                name: 'Lunch',
+                time: '12:30 PM',
+                items: ['Rice', 'Sambar', 'Cucumber Raita'],
+                notes: 'Traditional South Indian balanced meal'
+              },
+              {
+                name: 'Dinner',
+                time: '7:00 PM',
+                items: ['Chapati', 'Paneer Curry', 'Salad'],
+                notes: 'Protein-rich evening meal'
+              }
+            ]
+          }
+        ]
+      };
+
+      dietPlans.push(basePlan);
+    }
+
+    for (const plan of dietPlans) {
+      try {
+        await dietPlansService.create(plan);
+        console.log(`✅ Seeded diet plan for patient ${plan.patientId}`);
+      } catch (error) {
+        console.error(`❌ Error seeding diet plan for patient ${plan.patientId}:`, error);
       }
     }
   },
 
   async seedAll() {
-    const hospitals = await this.seedHospitals();
-    await this.seedUsers(hospitals);
+    console.log('🚀 Starting comprehensive data seeding...');
+
+    try {
+      // 1. Seed hospitals first
+      console.log('\n🏥 Seeding hospitals...');
+      const hospitals = await this.seedHospitals();
+
+      // 2. Update hospital IDs in sample data
+      const hospitalMap = hospitals.reduce((map, h) => {
+        map[h.name] = h.id;
+        return map;
+      }, {} as Record<string, string>);
+
+      // 3. Seed users
+      console.log('\n👥 Seeding users...');
+      await this.seedUsers(hospitals);
+
+      // 4. Seed patients
+      console.log('\n👤 Seeding patients...');
+      const patients = await this.seedPatients();
+
+      // Update patient hospital and dietitian IDs
+      for (let i = 0; i < patients.length; i++) {
+        const patient = patients[i];
+        const hospitalId = i < 2 ? hospitalMap['City General Hospital'] :
+                          i < 3 ? hospitalMap['Regional Medical Center'] :
+                          hospitalMap['Ayurveda Wellness Center'];
+
+        await patientsService.update(patient.id, {
+          hospitalId,
+          dietitianId: hospitalId === hospitalMap['City General Hospital'] ? 'dietitian-uid-1' :
+                       hospitalId === hospitalMap['Regional Medical Center'] ? 'dietitian-uid-2' :
+                       'dietitian-uid-3'
+        });
+      }
+
+      // 5. Seed vitals
+      console.log('\n📊 Seeding vitals...');
+      await this.seedVitals(patients);
+
+      // 6. Seed patient feedback
+      console.log('\n💬 Seeding patient feedback...');
+      await this.seedPatientFeedback(patients);
+
+      // 7. Seed diet plans
+      console.log('\n🍽️ Seeding diet plans...');
+      await this.seedDietPlans(patients);
+
+      console.log('\n🎉 Data seeding completed successfully!');
+      console.log(`📋 Summary:`);
+      console.log(`   • Hospitals: ${hospitals.length}`);
+      console.log(`   • Users: 12 (3 admins, 3 dietitians, 4 patients)`);
+      console.log(`   • Patients: ${patients.length}`);
+      console.log(`   • Vitals Records: ${patients.length * 3}`);
+      console.log(`   • Feedback Entries: ${patients.length * 7}`);
+      console.log(`   • Diet Plans: ${patients.length}`);
+
+      return {
+        hospitals,
+        patients,
+        success: true,
+        message: 'All sample data seeded successfully!'
+      };
+
+    } catch (error) {
+      console.error('❌ Error during data seeding:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
+    }
   },
+
+  async clearAllData() {
+    console.log('🗑️ Clearing all sample data...');
+
+    const collections = [
+      'patients', 'dietPlans', 'vitals', 'patientFeedback',
+      'consultations', 'mealTracking', 'messMenus', 'users', 'hospitals'
+    ];
+
+    for (const collectionName of collections) {
+      try {
+        const snapshot = await getDocs(collection(db, collectionName));
+        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        console.log(`✅ Cleared collection: ${collectionName}`);
+      } catch (error) {
+        console.error(`❌ Error clearing collection ${collectionName}:`, error);
+      }
+    }
+
+    console.log('🗑️ All data cleared successfully!');
+    return { success: true };
+  }
 };
 
 // Import types (you'll need to define these in your types file)

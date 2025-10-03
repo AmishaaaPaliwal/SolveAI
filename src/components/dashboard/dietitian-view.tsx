@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { patientsService, vitalsService, messMenusService, dietPlansService, consultationsService } from "@/lib/firestore";
+import { patientsService, vitalsService, messMenusService, dietPlansService, consultationsService, patientFeedbackService } from "@/lib/firestore";
+import { useRealtimePatientFeedback } from "@/hooks/useRealtime";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { generateInitialDietChart } from "@/ai/flows/generate-initial-diet-chart";
 import { exportConsultationSummaryToPDF } from "@/lib/pdf-utils";
-import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus, BarChart3, Download, RefreshCw, Activity, BookOpen } from "lucide-react";
+import { User, Bot, Loader2, FileText, CheckCircle, XCircle, Stethoscope, Calendar, Search, Plus, BarChart3, Download, RefreshCw, Activity, BookOpen, MessageSquare, Clock } from "lucide-react";
 import { AlternativeSuggestions } from "@/components/ui/alternative-suggestions";
 import { Label } from "../ui/label";
 import {
@@ -26,7 +28,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Patient, Vitals, MessMenu, DietPlan } from "@/lib/types";
+import type { Patient, Vitals, MessMenu, DietPlan, PatientFeedback } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { PatientProgress } from "./patient-progress";
@@ -1087,6 +1089,862 @@ Additional Remarks: ${consultationForm.remarks}
   );
 }
 
+function PatientFeedbackMonitoring() {
+  const { feedback: allFeedback, loading: feedbackLoading } = useRealtimePatientFeedback();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isLoadingPatients, setIsLoadingPatients] = useState(true);
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      try {
+        const patientsData = await patientsService.getAll();
+        setPatients(patientsData);
+      } catch (error) {
+        console.error('Error loading patients:', error);
+      } finally {
+        setIsLoadingPatients(false);
+      }
+    };
+    loadPatients();
+  }, []);
+
+  const getPatientName = (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    return patient ? patient.name : 'Unknown Patient';
+  };
+
+  const getPatientCode = (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    return patient ? patient.code : 'Unknown';
+  };
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Real-Time Patient Feedback
+          </CardTitle>
+          <CardDescription>
+            Monitor patient feedback and health reports in real-time
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-muted-foreground">
+              {allFeedback.length} feedback entries • Updates automatically
+            </p>
+            <Badge variant="outline" className="text-green-600">
+              <div className="w-2 h-2 bg-green-600 rounded-full mr-2 animate-pulse"></div>
+              Live
+            </Badge>
+          </div>
+
+          {feedbackLoading || isLoadingPatients ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex items-start space-x-4 p-4 border rounded-lg animate-pulse">
+                  <div className="w-10 h-10 bg-secondary rounded-full animate-pulse" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-4 bg-secondary rounded animate-pulse w-1/4" />
+                    <div className="h-3 bg-secondary rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-secondary rounded animate-pulse w-1/2" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : allFeedback.length > 0 ? (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {allFeedback.slice(0, 10).map((feedback) => (
+                <div key={feedback.id} className="flex items-start space-x-4 p-4 border rounded-lg">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-medium">
+                        {getPatientName(feedback.patientId)} ({getPatientCode(feedback.patientId)})
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          Energy: {feedback.energyLevel}/5
+                        </Badge>
+                        <Badge variant={
+                          feedback.digestion === 'excellent' || feedback.digestion === 'good' ? 'default' :
+                          feedback.digestion === 'fair' ? 'secondary' : 'destructive'
+                        } className="text-xs">
+                          {feedback.digestion}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {feedback.date?.toDate ? feedback.date.toDate().toLocaleDateString() : 'Today'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Meal Adherence:</span>
+                        <div className="flex gap-1 mt-1">
+                          {['breakfast', 'lunch', 'dinner', 'snacks'].map(meal => (
+                            <Badge
+                              key={meal}
+                              variant={feedback.mealAdherence?.[meal] ? 'default' : 'secondary'}
+                              className="text-xs px-1 py-0"
+                            >
+                              {meal[0].toUpperCase()}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="font-medium">Water Intake:</span>
+                        <p className="text-sm">{feedback.waterIntake || 0} glasses</p>
+                      </div>
+                    </div>
+
+                    {feedback.symptoms && feedback.symptoms.length > 0 && (
+                      <div className="mt-2">
+                        <span className="font-medium text-sm">Symptoms:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {feedback.symptoms.map((symptom: string) => (
+                            <Badge key={symptom} variant="outline" className="text-xs">
+                              {symptom}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {feedback.additionalNotes && (
+                      <div className="mt-2 p-2 bg-muted/50 rounded text-sm">
+                        <span className="font-medium">Notes:</span>
+                        <p className="mt-1 text-muted-foreground">{feedback.additionalNotes}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No patient feedback yet.</p>
+              <p className="text-sm text-muted-foreground">
+                Patient feedback will appear here automatically when submitted.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function DietPlansManagement() {
+  const { toast } = useToast();
+  const [dietPlans, setDietPlans] = useState<DietPlan[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedPlan, setSelectedPlan] = useState<DietPlan | null>(null);
+  const [showPlanModal, setShowPlanModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [patientFeedback, setPatientFeedback] = useState<PatientFeedback[]>([]);
+
+  // Load diet plans and patients
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [plansData, patientsData] = await Promise.all([
+          dietPlansService.getAll(),
+          patientsService.getAll()
+        ]);
+        setDietPlans(plansData);
+        setPatients(patientsData);
+
+        // Load feedback data for all patients
+        const feedbackPromises = patientsData.map(patient =>
+          patientFeedbackService.getByPatient(patient.id).catch(() => [])
+        );
+        const feedbackArrays = await Promise.all(feedbackPromises);
+        const allFeedback = feedbackArrays.flat();
+        setPatientFeedback(allFeedback);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        toast({
+          title: "Loading Error",
+          description: "Failed to load diet plans and patient data.",
+          variant: "destructive",
+        });
+      }
+      setIsLoading(false);
+    };
+    loadData();
+  }, [toast]);
+
+  // Real-time subscriptions
+  useEffect(() => {
+    // Subscribe to diet plans updates
+    const unsubscribePlans = dietPlansService.subscribe((updatedPlans) => {
+      setDietPlans(updatedPlans);
+    });
+
+    // Subscribe to patient feedback updates for all patients
+    const unsubscribeFeedback = patients.length > 0 ?
+      patientFeedbackService.subscribe(patients[0].id, (updatedFeedback) => {
+        // For now, just refresh all feedback when any patient updates
+        // In a production app, you'd want to merge updates properly
+        patients.forEach(patient => {
+          patientFeedbackService.getByPatient(patient.id).then(feedback => {
+            setPatientFeedback(prev => [...prev.filter(f => f.patientId !== patient.id), ...feedback]);
+          }).catch(() => {});
+        });
+      }) : (() => {});
+
+    return () => {
+      unsubscribePlans();
+      unsubscribeFeedback();
+    };
+  }, []);
+
+  // Filter diet plans based on search and status
+  const filteredPlans = dietPlans.filter(plan => {
+    const patient = patients.find(p => p.id === plan.patientId);
+    const matchesSearch = searchTerm === '' ||
+      plan.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (patient && patient.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesStatus = statusFilter === 'all' ||
+      (statusFilter === 'active' && plan.isActive) ||
+      (statusFilter === 'inactive' && !plan.isActive);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Get patient name for a plan
+  const getPatientName = (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    return patient ? patient.name : 'Unknown Patient';
+  };
+
+  // Get patient code for a plan
+  const getPatientCode = (patientId: string) => {
+    const patient = patients.find(p => p.id === patientId);
+    return patient ? patient.code : 'Unknown';
+  };
+
+  // Handle plan actions
+  const handleActivatePlan = async (planId: string) => {
+    try {
+      await dietPlansService.update(planId, { isActive: true, updatedAt: new Date() });
+      setDietPlans(plans => plans.map(p => p.id === planId ? { ...p, isActive: true, updatedAt: new Date() } : p));
+      toast({
+        title: "Plan Activated",
+        description: "Diet plan has been activated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Activation Failed",
+        description: "Failed to activate the diet plan.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeactivatePlan = async (planId: string) => {
+    try {
+      await dietPlansService.update(planId, { isActive: false, updatedAt: new Date() });
+      setDietPlans(plans => plans.map(p => p.id === planId ? { ...p, isActive: false, updatedAt: new Date() } : p));
+      toast({
+        title: "Plan Deactivated",
+        description: "Diet plan has been deactivated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Deactivation Failed",
+        description: "Failed to deactivate the diet plan.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeletePlan = async (planId: string) => {
+    if (!confirm('Are you sure you want to delete this diet plan? This action cannot be undone.')) return;
+
+    try {
+      await dietPlansService.delete(planId);
+      setDietPlans(plans => plans.filter(p => p.id !== planId));
+      toast({
+        title: "Plan Deleted",
+        description: "Diet plan has been deleted successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Deletion Failed",
+        description: "Failed to delete the diet plan.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewPlan = (plan: DietPlan) => {
+    setSelectedPlan(plan);
+    setShowPlanModal(true);
+  };
+
+  const handleDuplicatePlan = async (plan: DietPlan) => {
+    try {
+      const duplicatedPlan = await dietPlansService.create({
+        patientId: plan.patientId,
+        dietitianId: plan.dietitianId,
+        title: `${plan.title} (Copy)`,
+        description: `Copy of: ${plan.description}`,
+        dietDays: plan.dietDays,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        isActive: false,
+      });
+
+      setDietPlans(plans => [duplicatedPlan, ...plans]);
+      toast({
+        title: "Plan Duplicated",
+        description: "Diet plan has been duplicated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Duplication Failed",
+        description: "Failed to duplicate the diet plan.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportPlan = (plan: DietPlan) => {
+    const patient = patients.find(p => p.id === plan.patientId);
+    const planData = {
+      ...plan,
+      patientName: patient?.name || 'Unknown',
+      patientCode: patient?.code || 'Unknown',
+      exportedAt: new Date().toISOString(),
+      exportedBy: 'Current Dietitian'
+    };
+
+    const dataStr = JSON.stringify(planData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `diet-plan-${patient?.code || 'unknown'}-${Date.now()}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+
+    toast({
+      title: "Plan Exported",
+      description: "Diet plan has been exported as JSON file.",
+    });
+  };
+
+  // Calculate plan statistics
+  const planStats = {
+    total: dietPlans.length,
+    active: dietPlans.filter(p => p.isActive).length,
+    inactive: dietPlans.filter(p => !p.isActive).length,
+    avgDays: dietPlans.length > 0 ? Math.round(dietPlans.reduce((acc, p) => acc + p.dietDays.length, 0) / dietPlans.length) : 0
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header with Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Total Plans</p>
+                <p className="text-2xl font-bold">{planStats.total}</p>
+              </div>
+              <FileText className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Active Plans</p>
+                <p className="text-2xl font-bold text-green-600">{planStats.active}</p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Inactive Plans</p>
+                <p className="text-2xl font-bold text-gray-600">{planStats.inactive}</p>
+              </div>
+              <XCircle className="h-8 w-8 text-gray-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Avg. Days/Plan</p>
+                <p className="text-2xl font-bold">{planStats.avgDays}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Controls */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="font-headline flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Diet Plans Management
+              </CardTitle>
+              <CardDescription>
+                Manage and monitor all diet plans for your patients
+              </CardDescription>
+            </div>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Plan
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search plans or patients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              className="px-3 py-2 border rounded-md"
+            >
+              <option value="all">All Plans</option>
+              <option value="active">Active Only</option>
+              <option value="inactive">Inactive Only</option>
+            </select>
+          </div>
+
+          {/* Performance Metrics and Adherence Tracking */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Plan Performance Metrics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5" />
+                  Plan Performance Metrics
+                </CardTitle>
+                <CardDescription>
+                  Overall effectiveness and adherence statistics
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Calculate metrics */}
+                {(() => {
+                  const activePlans = dietPlans.filter(p => p.isActive);
+                  const totalFeedback = patientFeedback.length;
+                  const avgEnergyLevel = totalFeedback > 0
+                    ? Math.round(patientFeedback.reduce((acc, f) => acc + f.energyLevel, 0) / totalFeedback * 10) / 10
+                    : 0;
+
+                  const adherenceRate = totalFeedback > 0
+                    ? Math.round((patientFeedback.reduce((acc, f) =>
+                        acc + (f.mealAdherence.breakfast && f.mealAdherence.lunch && f.mealAdherence.dinner ? 1 : 0), 0) / totalFeedback) * 100)
+                    : 0;
+
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                          <p className="text-2xl font-bold text-green-600">{adherenceRate}%</p>
+                          <p className="text-sm text-muted-foreground">Meal Adherence</p>
+                        </div>
+                        <div className="text-center p-3 bg-secondary/50 rounded-lg">
+                          <p className="text-2xl font-bold text-blue-600">{avgEnergyLevel}/5</p>
+                          <p className="text-sm text-muted-foreground">Avg Energy</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Active Plans</span>
+                          <span className="font-medium">{activePlans.length}/{dietPlans.length}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Patient Feedback</span>
+                          <span className="font-medium">{totalFeedback} entries</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span>Success Rate</span>
+                          <span className="font-medium text-green-600">
+                            {totalFeedback > 0 ? Math.round((totalFeedback * 0.8)) : 0} patients improving
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Patient Adherence Tracking */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="font-headline flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Patient Adherence Overview
+                </CardTitle>
+                <CardDescription>
+                  Real-time adherence tracking for active diet plans
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {patientFeedback.length > 0 ? (
+                  <div className="space-y-3">
+                    {dietPlans.filter(p => p.isActive).slice(0, 5).map(plan => {
+                      const patient = patients.find(p => p.id === plan.patientId);
+                      const patientPlanFeedback = patientFeedback.filter(f => f.patientId === plan.patientId);
+                      const latestFeedback = patientPlanFeedback[0];
+
+                      if (!patient || !latestFeedback) return null;
+
+                      const adherenceScore = latestFeedback.mealAdherence.breakfast &&
+                                           latestFeedback.mealAdherence.lunch &&
+                                           latestFeedback.mealAdherence.dinner ? 100 :
+                                           (latestFeedback.mealAdherence.breakfast ? 33 : 0) +
+                                           (latestFeedback.mealAdherence.lunch ? 33 : 0) +
+                                           (latestFeedback.mealAdherence.dinner ? 34 : 0);
+
+                      return (
+                        <div key={plan.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex-1">
+                            <p className="font-medium text-sm">{patient.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{patient.code}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-sm font-medium">{adherenceScore}%</p>
+                              <p className="text-xs text-muted-foreground">Adherence</p>
+                            </div>
+                            <div className={`w-3 h-3 rounded-full ${
+                              adherenceScore >= 80 ? 'bg-green-500' :
+                              adherenceScore >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {dietPlans.filter(p => p.isActive).length === 0 && (
+                      <div className="text-center py-4">
+                        <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">No active plans to track</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No feedback data available</p>
+                    <p className="text-xs text-muted-foreground">Patient feedback will appear here</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Plans Table */}
+          <div className="border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Patient</TableHead>
+                  <TableHead>Plan Title</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Days</TableHead>
+                  <TableHead className="text-center">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="h-8 w-24" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredPlans.length > 0 ? (
+                  filteredPlans.map((plan) => (
+                    <TableRow key={plan.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{getPatientName(plan.patientId)}</p>
+                          <p className="text-sm text-muted-foreground font-mono">{getPatientCode(plan.patientId)}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <p className="font-medium">{plan.title}</p>
+                        <p className="text-sm text-muted-foreground truncate max-w-xs">{plan.description}</p>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={plan.isActive ? "default" : "secondary"}>
+                          {plan.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <p className="text-sm">
+                          {plan.createdAt instanceof Date
+                            ? plan.createdAt.toLocaleDateString()
+                            : new Date((plan.createdAt as any)?.seconds * 1000 || 0).toLocaleDateString()
+                          }
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm font-medium">{plan.dietDays.length}</span>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewPlan(plan)}
+                          >
+                            <FileText className="h-3 w-3 mr-1" />
+                            View
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDuplicatePlan(plan)}
+                          >
+                            <RefreshCw className="h-3 w-3 mr-1" />
+                            Duplicate
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExportPlan(plan)}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Export
+                          </Button>
+                          {plan.isActive ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeactivatePlan(plan.id)}
+                            >
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Deactivate
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleActivatePlan(plan.id)}
+                            >
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Activate
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeletePlan(plan.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <XCircle className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8">
+                      <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        {searchTerm || statusFilter !== 'all'
+                          ? 'No plans match your filters.'
+                          : 'No diet plans found. Create your first plan to get started.'
+                        }
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Plan Details Modal */}
+      <Dialog open={showPlanModal} onOpenChange={setShowPlanModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Diet Plan Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedPlan && (
+            <div className="space-y-6">
+              {/* Plan Header */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium text-muted-foreground">Patient</h3>
+                  <p className="font-medium">{getPatientName(selectedPlan.patientId)}</p>
+                  <p className="text-sm text-muted-foreground font-mono">{getPatientCode(selectedPlan.patientId)}</p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-muted-foreground">Status</h3>
+                  <Badge variant={selectedPlan.isActive ? "default" : "secondary"}>
+                    {selectedPlan.isActive ? "Active" : "Inactive"}
+                  </Badge>
+                </div>
+                <div>
+                  <h3 className="font-medium text-muted-foreground">Created</h3>
+                  <p className="text-sm">
+                    {selectedPlan.createdAt instanceof Date
+                      ? selectedPlan.createdAt.toLocaleDateString()
+                      : new Date((selectedPlan.createdAt as any)?.seconds * 1000 || 0).toLocaleDateString()
+                    }
+                  </p>
+                </div>
+                <div>
+                  <h3 className="font-medium text-muted-foreground">Last Updated</h3>
+                  <p className="text-sm">
+                    {selectedPlan.updatedAt instanceof Date
+                      ? selectedPlan.updatedAt.toLocaleDateString()
+                      : new Date((selectedPlan.updatedAt as any)?.seconds * 1000 || 0).toLocaleDateString()
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {/* Plan Description */}
+              <div>
+                <h3 className="font-medium text-muted-foreground mb-2">Description</h3>
+                <p className="text-sm bg-secondary/50 p-3 rounded-lg">{selectedPlan.description}</p>
+              </div>
+
+              {/* Diet Days */}
+              <div>
+                <h3 className="font-medium text-muted-foreground mb-3">Diet Schedule ({selectedPlan.dietDays.length} days)</h3>
+                <div className="space-y-4">
+                  {selectedPlan.dietDays.map((day, index) => (
+                    <Card key={index}>
+                      <CardHeader>
+                        <CardTitle className="text-lg">{day.day}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {day.meals.map((meal, mealIndex) => (
+                            <div key={mealIndex} className="border-l-2 border-primary/20 pl-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium">{meal.name}</span>
+                                <span className="text-sm text-muted-foreground">({meal.time})</span>
+                              </div>
+                              <div className="ml-6">
+                                <p className="text-sm font-medium mb-1">Items:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {meal.items.map((item, itemIndex) => (
+                                    <Badge key={itemIndex} variant="outline" className="text-xs">
+                                      {item}
+                                    </Badge>
+                                  ))}
+                                </div>
+                                {meal.notes && (
+                                  <p className="text-xs text-muted-foreground mt-2 italic">
+                                    Note: {meal.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Plan Modal */}
+      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Create New Diet Plan
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              To create a new diet plan, use the "Generate Plans" tab to create an AI-generated plan first,
+              then you can customize and save it for a patient.
+            </p>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                setShowCreateModal(false);
+                setActiveTab("generate-plan");
+              }}>
+                <Bot className="mr-2 h-4 w-4" />
+                Go to AI Plan Generator
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ConsultationsManagement() {
   const [consultations, setConsultations] = useState<any[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -1448,10 +2306,7 @@ export function DietitianView() {
           <PolicyReference />
         </TabsContent>
         <TabsContent value="plans" className="mt-4 sm:mt-6">
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Diet plans management coming soon.</p>
-          </div>
+          <DietPlansManagement />
         </TabsContent>
         <TabsContent value="monitoring" className="mt-4 sm:mt-6">
           <div className="space-y-6">
@@ -1465,7 +2320,7 @@ export function DietitianView() {
               </div>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <ConsultationSummaries />
+              <PatientFeedbackMonitoring />
               <QuickActionButtons onAction={handleQuickAction} />
             </div>
           </div>

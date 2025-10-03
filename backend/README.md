@@ -67,7 +67,7 @@ REDIS_URL=redis://localhost:6379
 
 # Google Cloud (for Vertex AI)
 GOOGLE_CLOUD_PROJECT_ID=your-project-id
-GOOGLE_CLOUD_LOCATION=us-central1
+GOOGLE_CLOUD_LOCATION=asia-south1
 ```
 
 ### Development
@@ -194,10 +194,10 @@ CMD ["npm", "start"]
 
 ### Google Cloud Run
 ```bash
-gcloud run deploy ayurtrack-backend \
+gcloud run deploy solveai-backend \
   --source . \
   --platform managed \
-  --region us-central1 \
+  --region asia-south1 \
   --allow-unauthenticated
 ```
 

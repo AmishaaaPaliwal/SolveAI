@@ -25,7 +25,7 @@ messaging.onBackgroundMessage((payload) => {
     body: payload.notification?.body || 'You have a new notification',
     icon: '/favicon.ico',
     badge: '/favicon.ico',
-    tag: payload.data?.tag || 'ayurtrack-notification',
+    tag: payload.data?.tag || 'solveai-notification',
     data: payload.data,
   };
 

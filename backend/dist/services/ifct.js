@@ -40,7 +40,10 @@ const better_sqlite3_1 = __importDefault(require("better-sqlite3"));
 const path = __importStar(require("path"));
 class IFCTService {
     constructor() {
-        const dbPath = path.join(__dirname, '../../data/ifct2017.db');
+        // Use absolute path for Docker compatibility
+        const dbPath = process.env.NODE_ENV === 'production'
+            ? '/app/data/ifct2017.db'
+            : path.join(__dirname, '../../data/ifct2017.db');
         this.db = new better_sqlite3_1.default(dbPath, { readonly: true });
     }
     /**

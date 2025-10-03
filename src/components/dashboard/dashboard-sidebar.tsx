@@ -2,6 +2,7 @@
 'use client';
 
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import {
   Sidebar,
@@ -51,7 +52,7 @@ const navItems: Record<Role, { name: string; href: string; icon: React.ReactNode
   'hospital-admin': hospitalNav,
 };
 
-export function DashboardSidebar() {
+function DashboardSidebarContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const role = (searchParams.get('role') as Role) || 'patient';
@@ -59,9 +60,9 @@ export function DashboardSidebar() {
 
   return (
     <Sidebar className="bg-sidebar">
-      <SidebarHeader className="bg-sidebar border-b border-sidebar-border">
-        <div className="px-2 py-2">
-          <h2 className="text-lg font-semibold text-sidebar-foreground">
+      <SidebarHeader className="bg-sidebar border-b border-sidebar-border p-3 xs:p-4">
+        <div className="px-1 xs:px-2 py-1 xs:py-2">
+          <h2 className="text-base xs:text-lg font-semibold text-sidebar-foreground">
             {role === 'patient' ? 'Patient Portal' :
              role === 'dietitian' ? 'Dietitian Portal' :
              role === 'hospital-admin' ? 'Hospital Portal' :
@@ -69,18 +70,20 @@ export function DashboardSidebar() {
           </h2>
         </div>
       </SidebarHeader>
-      <SidebarContent className="bg-sidebar">
-        <SidebarMenu>
+      <SidebarContent className="bg-sidebar p-2 xs:p-3">
+        <SidebarMenu className="space-y-1">
           {currentNav.map((item) => (
             <SidebarMenuItem key={item.name}>
                 <Link href={`${item.href}?role=${role}`} className="w-full">
                     <SidebarMenuButton
                         tooltip={{ children: item.name }}
                         isActive={pathname === item.href}
-                        className="w-full"
+                        className="w-full p-2 xs:p-3 text-sm xs:text-base"
                     >
-                        {item.icon}
-                        <span>{item.name}</span>
+                        <div className="flex items-center gap-2 xs:gap-3">
+                          {item.icon}
+                          <span className="truncate">{item.name}</span>
+                        </div>
                     </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -88,5 +91,26 @@ export function DashboardSidebar() {
         </SidebarMenu>
       </SidebarContent>
     </Sidebar>
+  );
+}
+
+export function DashboardSidebar() {
+  return (
+    <Suspense fallback={
+      <Sidebar className="bg-sidebar">
+        <SidebarHeader className="bg-sidebar border-b border-sidebar-border p-3 xs:p-4">
+          <div className="px-1 xs:px-2 py-1 xs:py-2">
+            <h2 className="text-base xs:text-lg font-semibold text-sidebar-foreground">
+              Loading...
+            </h2>
+          </div>
+        </SidebarHeader>
+        <SidebarContent className="bg-sidebar p-2 xs:p-3">
+          <div className="p-4 text-sm text-muted-foreground">Loading navigation...</div>
+        </SidebarContent>
+      </Sidebar>
+    }>
+      <DashboardSidebarContent />
+    </Suspense>
   );
 }

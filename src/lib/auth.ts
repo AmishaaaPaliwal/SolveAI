@@ -143,7 +143,7 @@ export function useAuth() {
 }
 
 // Load user profile from Firestore
-async function loadUserProfile(uid: string): Promise<UserProfile> {
+export async function loadUserProfile(uid: string): Promise<UserProfile> {
   try {
     // Import usersService dynamically to avoid circular imports
     const { usersService } = await import('./firestore');

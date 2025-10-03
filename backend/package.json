@@ -1,5 +1,5 @@
 {
-  "name": "ayurtrack-backend",
+  "name": "solveai-backend",
   "version": "1.0.0",
   "description": "Backend API for SolveAI - Ayurvedic Diet Management Platform",
   "main": "dist/index.js",
@@ -37,11 +37,13 @@
     "firebase-admin": "^13.5.0",
     "helmet": "^8.1.0",
     "langchain": "^0.3.35",
+    "puppeteer": "^24.23.0",
     "redis": "^5.8.2",
     "typescript": "^5.9.2"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
+    "@types/puppeteer": "^5.4.7",
     "concurrently": "^9.2.1",
     "nodemon": "^3.1.10",
     "ts-node": "^10.9.2"
