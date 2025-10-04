@@ -44,6 +44,28 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    message: 'Welcome to SolveAI Backend API',
+    version: '1.0.0',
+    status: 'Running',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      patients: '/api/patients',
+      dietPlans: '/api/diet-plans',
+      foods: '/api/foods',
+      messMenus: '/api/mess-menus',
+      vitals: '/api/vitals',
+      consultations: '/api/consultations',
+      ai: '/api/ai',
+      notifications: '/api/notifications',
+      policies: '/api/policies'
+    }
+  });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
@@ -52,6 +74,57 @@ app.get('/health', (req, res) => {
     service: 'SolveAI Backend API'
   });
 });
+
+// API info endpoint handler
+const apiInfoHandler = (req: express.Request, res: express.Response) => {
+  res.json({
+    message: 'SolveAI API Endpoints',
+    version: '1.0.0',
+    baseUrl: `${req.protocol}://${req.get('host')}/api`,
+    endpoints: {
+      patients: {
+        url: '/api/patients',
+        description: 'Patient management'
+      },
+      dietPlans: {
+        url: '/api/diet-plans',
+        description: 'Diet plan generation and management'
+      },
+      foods: {
+        url: '/api/foods',
+        description: 'Food database and nutrition info'
+      },
+      messMenus: {
+        url: '/api/mess-menus',
+        description: 'Hospital mess menu management'
+      },
+      vitals: {
+        url: '/api/vitals',
+        description: 'Patient vital signs tracking'
+      },
+      consultations: {
+        url: '/api/consultations',
+        description: 'Doctor-patient consultations'
+      },
+      ai: {
+        url: '/api/ai',
+        description: 'AI-powered diet recommendations'
+      },
+      notifications: {
+        url: '/api/notifications',
+        description: 'Push notifications'
+      },
+      policies: {
+        url: '/api/policies',
+        description: 'Hospital policies and guidelines'
+      }
+    }
+  });
+};
+
+// API info endpoints (handle both /api and /api/)
+app.get('/api', apiInfoHandler);
+app.get('/api/', apiInfoHandler);
 
 // API routes
 app.use('/api/patients', patientRoutes);

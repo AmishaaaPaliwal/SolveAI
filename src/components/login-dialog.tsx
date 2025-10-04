@@ -24,9 +24,11 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl font-headline">
-            <Leaf className="text-primary h-6 w-6" />
-            Welcome to SolveAI
+          <DialogTitle className="text-2xl font-headline">
+            <span className="flex items-center gap-2">
+              <Leaf className="text-primary h-6 w-6" />
+              Welcome to SolveAI
+            </span>
           </DialogTitle>
           <DialogDescription>
             Please select your role to continue.
