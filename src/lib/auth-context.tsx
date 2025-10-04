@@ -150,8 +150,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setPermissions(ROLE_PERMISSIONS.patient);
         }
       } else {
-        setUserProfile(null);
-        setPermissions(null);
+        // Check for demo role in URL for development/demo purposes
+        const urlParams = new URLSearchParams(window.location.search);
+        const demoRoleParam = urlParams.get('role');
+        const validRoles = ['patient', 'dietitian', 'hospital-admin'] as const;
+        const demoRole = validRoles.find(role => role === demoRoleParam);
+
+        if (demoRole && ROLE_PERMISSIONS[demoRole]) {
+          // Set mock profile for demo
+          const mockProfile: UserProfile = {
+            uid: `demo-${demoRole}`,
+            email: `${demoRole}@demo.com`,
+            displayName: `${demoRole.charAt(0).toUpperCase() + demoRole.slice(1)} User`,
+            role: demoRole,
+            profileComplete: true,
+          };
+          setUserProfile(mockProfile);
+          setPermissions(ROLE_PERMISSIONS[demoRole]);
+        } else {
+          setUserProfile(null);
+          setPermissions(null);
+        }
       }
 
       setLoading(false);

@@ -11,7 +11,7 @@ coverage
 .nyx
 .vscode
 .idea
-*.log
+.log
 dist
 .env.local
 .env.development.local

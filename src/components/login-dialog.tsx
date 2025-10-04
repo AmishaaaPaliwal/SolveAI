@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { User, Stethoscope, Building, Leaf } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Role } from "@/lib/types";
 
 type LoginDialogProps = {
@@ -14,10 +15,15 @@ type LoginDialogProps = {
 
 export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleLogin = (role: Role) => {
     router.push(`/dashboard?role=${role}`);
     onOpenChange(false);
+    toast({
+      title: "Welcome!",
+      description: `Accessing ${role} dashboard in demo mode.`,
+    });
   };
 
   return (
